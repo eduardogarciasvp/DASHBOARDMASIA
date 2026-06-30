@@ -74,8 +74,17 @@ Listo: cada quien entra en la URL de Vercel con su correo y contraseña.
 1. **Admin** entra → *Cargar matriz* (una por empresa) → cuenta publicaciones (con precio) y SKUs por empresa.
 2. **Admin** → pestaña **Cobertura** → define País · Empresa · Canal. Los denominadores se llenan solos.
    *La Masia Shop va como una fila por empresa: el total del país las suma.*
-3. **Usuarios** → *Cargar publicaciones* (export por tienda) → se guarda lo real.
-4. Todos ven el cumplimiento cruzado. Cada quien arranca filtrado por sus países, pero puede quitar el filtro.
+3. **Usuarios** → *Cargar publicaciones*. Un **solo Excel** con todo y el programa lo reparte por canal.
+
+### Formato del Excel de publicaciones (consolidado)
+Una fila por listing, con estas columnas (los nombres se detectan solos):
+
+`PAIS · EMPRESA · CANAL · TITULO · SKU`
+
+- El programa agrupa por **país · empresa · canal** y, por grupo, cuenta publicaciones (filas) y SKUs únicos.
+- **País** acepta códigos (`MX`, `USA`, `CO`, `VE`, `BR`, `ES`) o nombres completos.
+- **SKU de Amazon**: el programa quita el correlativo OEM final (`-000`, `-016`...) para no contar como SKU distinto cada variante OEM del mismo físico. Mercado Libre, eBay y Masia Shop se cuentan tal cual.
+- Si el archivo **no** trae esas columnas, el programa vuelve al modo antiguo (un archivo = una tienda, detectada por el nombre).
 
 ---
 
