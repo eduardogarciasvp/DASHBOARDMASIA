@@ -307,17 +307,6 @@
     <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
   </div>
 
-  <div class="criterio">
-    <div class="lbl">
-      <b>Criterio de "publicable" (matriz):</b> <b>Estricto</b> = con stock <u>y</u> precio ·
-      <b>Amplio</b> = con precio (stock opcional). Define el denominador SKUs Matriz y Pub. Matriz.
-    </div>
-    <div class="toggle">
-      <button id="t-est" class="on" onclick="setCriterio('estricto')">Estricto</button>
-      <button id="t-amp" onclick="setCriterio('amplio')">Amplio</button>
-    </div>
-  </div>
-
   <!-- ===================== PÁGINA 1 ===================== -->
   <div class="page on" id="page1">
     <div class="kpis" id="kpis"></div>
@@ -492,7 +481,7 @@ const DEMO=[
 ];
 
 let DATA=clone(DEMO);
-let CRITERIO='estricto', METRICA='pctSKU', PAGE=1;
+let METRICA='pctSKU', PAGE=1;
 let MATRIZ_AGG={}; // empresa -> {pub, sku} : deber ser (solo con precio), derivado de la matriz
 let FILT={pais:new Set(),canal:new Set(),empresa:new Set()};
 let SORT={col:null,dir:1};
@@ -500,8 +489,8 @@ let FP={col:null};
 let PEND=[]; // archivos de publicaciones pendientes de confirmar
 function clone(o){return JSON.parse(JSON.stringify(o))}
 
-const skuMz=r=>CRITERIO==='estricto'?r.smE:r.smA;
-const pubMz=r=>CRITERIO==='estricto'?r.pmE:r.pmA;
+const skuMz=r=>r.smA;
+const pubMz=r=>r.pmA;
 const pctSKU=r=>{const d=skuMz(r);return d?Math.round(r.skuPb/d*100):null};
 const pctPUB=r=>{const d=pubMz(r);return d?Math.round(r.pub/d*100):null};
 const cls=p=>p>=90?'g':p>=75?'y':'r';
@@ -741,9 +730,6 @@ function upd(idx,campo,el){
   const v=parseInt(el.textContent.replace(/[^\d]/g,''))||0;
   DATA[idx][campo]=v;clearTimeout(window._t);window._t=setTimeout(render,700);
 }
-function setCriterio(c){CRITERIO=c;
-  document.getElementById('t-est').classList.toggle('on',c==='estricto');
-  document.getElementById('t-amp').classList.toggle('on',c==='amplio');render()}
 function setMetrica(m){METRICA=m;
   document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
 function setPage(n){PAGE=n;
@@ -1007,8 +993,11 @@ async function agregarCobertura(){
 async function eliminarCobertura(pais,empresa,canal){
   if(!esAdmin())return;
   try{
-    const {error}=await SB.from('cobertura').delete().match({pais,empresa,canal});
-    if(error)throw error;
+    const [c,p]=await Promise.all([
+      SB.from('cobertura').delete().match({pais,empresa,canal}),
+      SB.from('publicaciones').delete().match({pais,empresa,canal})
+    ]);
+    if(c.error)throw c.error; if(p.error)throw p.error;
     await cargarTodo();
   }catch(e){alert('No se pudo quitar: '+(e.message||e));}
 }
@@ -1053,7 +1042,7 @@ function buildReporte(){
   const all=DATA,tg=totales(all);let H='';
   H+=`<div class="rep-page"><div class="rep-head">
       <div class="rt"><small>Masia Group · E-commerce</small>Resumen general de cumplimiento</div>
-      <div class="rd">${hoy}<br>Criterio: ${CRITERIO}</div></div>`;
+      <div class="rd">${hoy}</div></div>`;
   H+=`<div class="rep-kpis">
       ${repK('Cumpl. SKU',tg.pSKU==null?'—':tg.pSKU+'%',clsN(tg.pSKU))}
       ${repK('Cumpl. Pub.',tg.pPUB==null?'—':tg.pPUB+'%',clsN(tg.pPUB))}
@@ -1079,7 +1068,7 @@ function buildReporte(){
     const rs=all.filter(r=>r.pais===p);const t=totales(rs);const {acc,fort}=accionesPais(p);
     H+=`<div class="rep-page"><div class="rep-head">
         <div class="rt"><small>Masia Group · E-commerce</small>${FLAGS[p]||''} ${p}</div>
-        <div class="rd">${hoy}<br>Criterio: ${CRITERIO}</div></div>`;
+        <div class="rd">${hoy}</div></div>`;
     H+=`<div class="rep-kpis">
         ${repK('Cumpl. SKU',t.pSKU==null?'—':t.pSKU+'%',clsN(t.pSKU))}
         ${repK('Cumpl. Pub.',t.pPUB==null?'—':t.pPUB+'%',clsN(t.pPUB))}
