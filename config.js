@@ -6,5 +6,5 @@
 //  y en el repo. La seguridad la dan las políticas RLS, no el secreto.
 //  NUNCA pongas aquí la "service_role" key.
 // ============================================================
-window.SUPA_URL  = "https://TU-PROYECTO.supabase.co";
-window.SUPA_ANON = "TU-ANON-KEY";
+window.SUPA_URL  = "https://mhytkxyllylmkxhepbhe.supabase.co";
+window.SUPA_ANON = "sb_publishable_raHkNysgdtqrC_4YCnOkIg_avngb71X";
