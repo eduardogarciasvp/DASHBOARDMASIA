@@ -450,7 +450,7 @@
 const FLAGS={"México":"🇲🇽","Colombia":"🇨🇴","Estados Unidos":"🇺🇸","Brasil":"🇧🇷","Venezuela":"🇻🇪","España":"🇪🇸"};
 const ORD_PAIS=["México","Colombia","Estados Unidos","Brasil","Venezuela","España"];
 const CANALES=["Masia Shop","Mercado Libre","Amazon","eBay","Camozzi Shop"];
-const EMPRESAS=["Masia Group","Masia Rentals","Masia Compressores","Xstore","Camozzi"];
+const EMPRESAS=["Masia Group","Masia Rentals","Masia Compressors","Xstore","Camozzi"];
 
 function f(pais,canal,empresa,smE,smA,skuPb,pmE,pmA,pub){return {pais,canal,empresa,smE,smA,skuPb,pmE,pmA,pub}}
 const DEMO=[
@@ -756,23 +756,74 @@ function setPage(n){PAGE=n;
 const SKU_CANDS=['sku','seller-sku','seller_sku','custom label (sku)','custom label','codigo','código',
   'variant sku','codigo universal','código universal','part number','numero de parte','número de parte',
   'sku del producto','codigo de producto','código de producto','referencia','ref'];
-function leerPubFile(file){
+// Columnas de un export consolidado (país·empresa·canal·sku)
+const COL_PAIS=['pais','país','country'];
+const COL_EMP =['empresa','company','seller','vendedor'];
+const COL_CAN =['canal','channel','marketplace','plataforma'];
+function findCol(keys,cands){return keys.find(k=>cands.includes(k.toLowerCase().trim()))||null;}
+// País: acepta códigos (MX, USA, CO...) y nombres
+const PAIS_ALIAS={mx:'México','méxico':'México',mexico:'México',co:'Colombia',colombia:'Colombia',
+  usa:'Estados Unidos',us:'Estados Unidos',eeuu:'Estados Unidos','estados unidos':'Estados Unidos','united states':'Estados Unidos',
+  br:'Brasil',brasil:'Brasil',brazil:'Brasil',ve:'Venezuela',venezuela:'Venezuela',
+  es:'España','españa':'España',espana:'España',spain:'España'};
+function normPais(v){const k=String(v==null?'':v).trim().toLowerCase();return PAIS_ALIAS[k]||String(v==null?'':v).trim();}
+function normCanal(v){const k=String(v==null?'':v).trim().toLowerCase();
+  if(/mercado|meli/.test(k)||k==='ml')return 'Mercado Libre';
+  if(/amazon|amz/.test(k))return 'Amazon';
+  if(/ebay/.test(k))return 'eBay';
+  if(/camozzi/.test(k))return 'Camozzi Shop';
+  if(/shop|shopify/.test(k))return 'Masia Shop';
+  return String(v==null?'':v).trim();
+}
+function normEmpresa(v){let s=String(v==null?'':v).trim();
+  if(s.toUpperCase()==='XSTORE')return 'Xstore';
+  if(/^masia\s+compressor/i.test(s))return 'Masia Compressors';
+  return s;
+}
+// SKUs distintos de un grupo. En Amazon se quita el correlativo OEM final (-000, -016...)
+// para no contar como SKU distinto cada variante OEM del mismo producto físico.
+function skuDistintos(rows,skuCol,canal){
+  const amazon=/amazon/i.test(canal||'');
+  const set=new Set();
+  rows.forEach(x=>{let v=String(x[skuCol]==null?'':x[skuCol]).trim();if(!v)return;
+    if(amazon)v=v.replace(/-\d{3,4}$/,'');
+    set.add(v.toUpperCase());});
+  return set.size;
+}
+function analizarPubFile(file){
   return new Promise(res=>{
     const r=new FileReader();
     r.onload=ev=>{try{
       const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      const filas=rows.length;
-      let skuCol=null;
-      if(rows.length){
-        const keys=Object.keys(rows[0]);
-        skuCol=keys.find(k=>SKU_CANDS.includes(k.toLowerCase().trim()))||keys.find(k=>k.toLowerCase().includes('sku'));
+      if(!rows.length){res({grupos:[],error:'la hoja está vacía',filename:file.name});return}
+      const keys=Object.keys(rows[0]);
+      const cPais=findCol(keys,COL_PAIS), cEmp=findCol(keys,COL_EMP), cCan=findCol(keys,COL_CAN);
+      let skuCol=keys.find(k=>SKU_CANDS.includes(k.toLowerCase().trim()))||keys.find(k=>k.toLowerCase().includes('sku'));
+      if(cPais&&cEmp&&cCan){
+        // ---- Consolidado: una fila por listing; agrupamos por país·empresa·canal ----
+        const g={};
+        rows.forEach(x=>{
+          const pais=normPais(x[cPais]), empresa=normEmpresa(x[cEmp]), canal=normCanal(x[cCan]);
+          const k=pais+'|'+empresa+'|'+canal;
+          (g[k]=g[k]||{pais,empresa,canal,rows:[]}).rows.push(x);
+        });
+        const grupos=Object.values(g).map(o=>({
+          pais:o.pais, empresa:o.empresa, canal:o.canal,
+          filas:o.rows.length,
+          skusUnicos: skuCol?skuDistintos(o.rows,skuCol,o.canal):o.rows.length,
+          skuCol: skuCol||null
+        }));
+        res({grupos,consolidado:true,filename:file.name});
+      } else {
+        // ---- Fallback: el archivo es una sola tienda (detección por nombre) ----
+        const det=detectarPCE(file.name);
+        const filas=rows.length;
+        const skusUnicos=skuCol?skuDistintos(rows,skuCol,det.canal):filas;
+        res({grupos:[{...det,filas,skusUnicos,skuCol:skuCol||null}],consolidado:false,filename:file.name});
       }
-      let skusUnicos=filas;
-      if(skuCol){const s=new Set();rows.forEach(x=>{const v=(x[skuCol]||'').toString().trim();if(v)s.add(v)});skusUnicos=s.size||filas}
-      res({filas,skusUnicos,skuCol:skuCol||null});
-    }catch(err){res({filas:0,skusUnicos:0,error:err.message})}};
+    }catch(err){res({grupos:[],error:err.message,filename:file.name})}};
     r.readAsArrayBuffer(file);
   });
 }
@@ -795,7 +846,7 @@ function detectarPCE(name){
   let empresa='';
   if(camozzi)empresa='Camozzi';
   else if(/rentals?/.test(n))empresa='Masia Rentals';
-  else if(/compres|compress/.test(n))empresa='Masia Compressores';
+  else if(/compres|compress/.test(n))empresa='Masia Compressors';
   else if(/xstore/.test(n))empresa='Xstore';
   else if(/group|masia/.test(n))empresa='Masia Group';
   return {pais,canal,empresa};
@@ -805,21 +856,25 @@ async function cargarPublicaciones(e){
   if(!files.length)return;
   PEND=[];
   for(const file of files){
-    const info=await leerPubFile(file);
-    const det=detectarPCE(file.name);
-    PEND.push({filename:file.name,...info,...det});
+    const info=await analizarPubFile(file);
+    if(info.error){PEND.push({filename:file.name,error:info.error,filas:0,skusUnicos:0,pais:'',empresa:'',canal:''});continue}
+    info.grupos.forEach(gr=>PEND.push({filename:file.name,consolidado:info.consolidado,...gr}));
   }
   abrirModalPub();
 }
-function optSelect(arr,val){return '<option value="">—</option>'+arr.map(v=>`<option value="${v}" ${v===val?'selected':''}>${v}</option>`).join('')}
+function optSelect(arr,val){
+  const list=arr.slice(); if(val&&!list.includes(val))list.unshift(val);
+  return '<option value="">—</option>'+list.map(v=>`<option value="${v}" ${v===val?'selected':''}>${v}</option>`).join('');
+}
 function abrirModalPub(){
   let h='';
   PEND.forEach((p,i)=>{
     const det=(p.pais&&p.canal&&p.empresa);
     const cnt=p.error?`<span class="warn">No se pudo leer: ${p.error}</span>`
-      :`<b>${fmt(p.filas)}</b> publicaciones · <b>${fmt(p.skusUnicos)}</b> SKUs únicos ${p.skuCol?'(col. "'+p.skuCol+'")':'(sin columna SKU detectada — se usa nº de filas)'}`;
+      :`<b>${fmt(p.filas)}</b> publicaciones · <b>${fmt(p.skusUnicos)}</b> SKUs únicos ${p.skuCol?'(col. "'+p.skuCol+'")':'(sin columna SKU — se usa nº de filas)'}`;
+    const cab=p.consolidado?`<b>${p.empresa||'?'} · ${p.canal||'?'} · ${p.pais||'?'}</b>`:p.filename;
     h+=`<div class="pubrow">
-      <div class="pn">📄 ${p.filename} ${det?'✅':'⚠️'}</div>
+      <div class="pn">📄 ${cab} ${det?'✅':'⚠️'}</div>
       <div class="pc">${cnt}</div>
       <div class="pubsel">
         <div class="pg"><label>País</label><select class="${p.pais?'':'miss'}" onchange="setPend(${i},'pais',this.value)">${optSelect(ORD_PAIS,p.pais)}</select></div>
@@ -1052,16 +1107,20 @@ function esAdmin(){return !!(ME&&ME.rol==='admin')}
 function supaConfigurada(){
   return window.SUPA_URL&&window.SUPA_ANON&&!/TU-PROYECTO|TU-ANON/.test(String(window.SUPA_URL)+String(window.SUPA_ANON));
 }
-// DATA se reconstruye cruzando cobertura + matriz + publicaciones
+// DATA = unión de cobertura + publicaciones (cruzadas con la matriz).
+// Así lo real aparece aunque todavía no exista la fila de cobertura.
 function rebuildDATA(){
-  const pm={};
-  PUBROWS.forEach(p=>pm[p.pais+'|'+p.empresa+'|'+p.canal]={skuPb:p.sku_pb||0,pub:p.pub||0});
-  DATA=COBROWS.map(c=>{
-    const a=MATRIZ_AGG[c.empresa]||{pub:0,sku:0};
-    const r=pm[c.pais+'|'+c.empresa+'|'+c.canal]||{skuPb:0,pub:0};
-    return {pais:c.pais,canal:c.canal,empresa:c.empresa,
-      smE:a.sku,smA:a.sku,skuPb:r.skuPb,pmE:a.pub,pmA:a.pub,pub:r.pub};
-  });
+  const key=o=>o.pais+'|'+o.empresa+'|'+o.canal;
+  const pm={}; PUBROWS.forEach(p=>pm[key(p)]={skuPb:p.sku_pb||0,pub:p.pub||0});
+  const fila=(pais,empresa,canal)=>{
+    const a=MATRIZ_AGG[empresa]||{pub:0,sku:0};
+    const r=pm[pais+'|'+empresa+'|'+canal]||{skuPb:0,pub:0};
+    return {pais,canal,empresa,smE:a.sku,smA:a.sku,skuPb:r.skuPb,pmE:a.pub,pmA:a.pub,pub:r.pub};
+  };
+  const seen=new Set(), out=[];
+  COBROWS.forEach(c=>{seen.add(key(c));out.push(fila(c.pais,c.empresa,c.canal));});
+  PUBROWS.forEach(p=>{if(!seen.has(key(p))){seen.add(key(p));out.push(fila(p.pais,p.empresa,p.canal));}});
+  DATA=out;
 }
 async function cargarTodo(){
   const [mz,cob,pub]=await Promise.all([
