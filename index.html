@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cumplimiento de Publicaciones · E-commerce Masia Group</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul:#1F3864; --azul-2:#2B4A7E; --azul-tinta:#16243F;
+    --ambar:#E08A1E; --verde:#1F9D6B; --verde-bg:#E6F4EE;
+    --amar:#C9A227; --amar-bg:#FBF4DD; --rojo:#C0392B; --rojo-bg:#FBE9E7;
+    --tinta:#1A2230; --gris:#5C6675; --linea:#E3E7EE; --papel:#F5F6F9; --blanco:#FFFFFF;
+    --neutro:#9AA3B0; --neutro-bg:#EEF1F6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--papel);color:var(--tinta);
+    -webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1;line-height:1.45}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 18px 80px}
+
+  header{background:linear-gradient(160deg,var(--azul-tinta),var(--azul) 70%);color:#fff;
+    padding:26px 0 22px;border-bottom:3px solid var(--ambar)}
+  .head-inner{max-width:1200px;margin:0 auto;padding:0 18px;display:flex;
+    justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .brand .eyebrow{font-family:'Barlow Condensed';letter-spacing:.22em;text-transform:uppercase;
+    font-size:13px;color:#9FB4D8;font-weight:600}
+  .brand h1{font-family:'Barlow Condensed';font-weight:700;font-size:34px;line-height:1;margin-top:2px}
+  .brand h1 b{color:var(--ambar)}
+  .head-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:'Inter';font-weight:600;font-size:13px;border:none;border-radius:7px;
+    padding:9px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .btn-ghost{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.22)}
+  .btn-ghost:hover{background:rgba(255,255,255,.20)}
+  .btn-solid{background:var(--ambar);color:#1A1206}
+  .btn-solid:hover{filter:brightness(1.06)}
+
+  .tabs{display:flex;gap:4px;margin-top:18px;border-bottom:2px solid var(--linea)}
+  .tab{font-family:'Barlow Condensed';font-weight:600;font-size:17px;background:none;border:none;
+    color:var(--gris);padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s}
+  .tab.on{color:var(--azul);border-bottom-color:var(--ambar)}
+  .tab:hover{color:var(--azul)}
+
+  .criterio{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;
+    padding:13px 16px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .criterio .lbl{font-size:12.5px;color:var(--gris);max-width:640px}
+  .criterio .lbl b{color:var(--azul)}
+  .toggle{display:inline-flex;background:var(--papel);border:1px solid var(--linea);border-radius:9px;padding:3px}
+  .toggle button{font-family:'Inter';font-weight:600;font-size:13px;border:none;background:none;
+    color:var(--gris);padding:8px 14px;border-radius:7px;cursor:pointer;transition:.15s}
+  .toggle button.on{background:var(--azul);color:#fff}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+  .kpi{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:16px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azul)}
+  .kpi.is-g::before{background:var(--verde)} .kpi.is-y::before{background:var(--amar)} .kpi.is-r::before{background:var(--rojo)} .kpi.is-n::before{background:var(--neutro)}
+  .kpi.k-blue::before{background:var(--azul)} .kpi.k-amb::before{background:var(--ambar)}
+  .kpi .k-lab{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);font-weight:600}
+  .kpi .k-val{font-family:'Barlow Condensed';font-weight:700;font-size:38px;line-height:1;margin-top:7px;color:var(--azul-tinta)}
+  .kpi .k-val small{font-size:18px;color:var(--gris);font-weight:600}
+  .kpi.is-g .k-val{color:var(--verde)} .kpi.is-y .k-val{color:#9A7A12} .kpi.is-r .k-val{color:var(--rojo)} .kpi.is-n .k-val{color:var(--neutro)}
+  .kpi .k-sub{font-size:11.5px;color:var(--gris);margin-top:5px}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .chips .hintf{font-size:12px;color:var(--gris)}
+  .chip-f{display:inline-flex;align-items:center;gap:7px;background:#EAF0FA;color:var(--azul);
+    border:1px solid #D4E0F2;border-radius:20px;padding:5px 11px;font-size:12px;font-weight:600}
+  .chip-f span.lbl{opacity:.7;font-weight:600}
+  .chip-x{cursor:pointer;font-weight:800;opacity:.65;font-size:13px}
+  .chip-x:hover{opacity:1}
+  .chip-clear{cursor:pointer;color:var(--gris);font-size:12px;text-decoration:underline;font-weight:600;background:none;border:none}
+
+  .sec{margin-top:26px}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:13px;flex-wrap:wrap}
+  .sec-h h2{font-family:'Barlow Condensed';font-weight:700;font-size:23px;color:var(--azul-tinta)}
+  .sec-h .hint{font-size:12.5px;color:var(--gris)}
+
+  .pais-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .pais-card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:15px 16px}
+  .pais-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .pais-top .nm{font-family:'Barlow Condensed';font-weight:600;font-size:18px;color:var(--azul-tinta);display:flex;align-items:center;gap:8px}
+  .flag{font-size:18px}
+  .pais-pct{font-family:'Barlow Condensed';font-weight:700;font-size:24px;line-height:1}
+  .bar{height:9px;background:var(--papel);border-radius:6px;overflow:hidden;border:1px solid var(--linea)}
+  .bar>span{display:block;height:100%;border-radius:6px;transition:width .6s ease}
+  .bar.s2{margin-top:6px;height:7px;opacity:.85}
+  .pais-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gris);margin-top:8px}
+  .pais-meta b{color:var(--tinta);font-weight:600}
+
+  .tbl-wrap{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;overflow:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:920px}
+  thead th{background:var(--azul);color:#fff;font-weight:600;font-size:11px;text-transform:uppercase;
+    letter-spacing:.03em;padding:9px 11px;text-align:right;white-space:nowrap;vertical-align:bottom}
+  thead th .u{font-weight:400;font-size:9.5px;text-transform:none;display:block;opacity:.85;margin-top:2px}
+  thead th:first-child,thead th.l{text-align:left}
+  .th-sort{cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:4px}
+  .th-sort:hover{color:#CFE0FF}
+  .arr{font-style:normal;font-size:10px;opacity:.55}
+  .arr.on{opacity:1;color:var(--ambar)}
+  .th-filter{cursor:pointer;background:rgba(255,255,255,.14);border:none;color:#fff;border-radius:5px;
+    font-size:11px;padding:2px 6px;margin-left:7px;line-height:1}
+  .th-filter:hover{background:rgba(255,255,255,.28)}
+  .th-filter.act{background:var(--ambar);color:#1A1206}
+  tbody td{padding:8px 11px;text-align:right;border-bottom:1px solid var(--linea);white-space:nowrap}
+  tbody td.l{text-align:left;font-weight:500}
+  tbody td.dim{color:var(--gris);font-weight:500}
+  tbody tr:hover td{background:#FAFBFD}
+  td.edit{cursor:text;border-radius:5px}
+  td.edit:focus{outline:2px solid var(--ambar);background:#FFFDF7}
+  .pais-cell{font-weight:600;color:var(--azul-tinta);display:inline-flex;align-items:center;gap:6px}
+  .pillpct{font-weight:700;padding:3px 8px;border-radius:20px;font-size:12px;display:inline-block;min-width:50px;text-align:center}
+  .g{background:var(--verde-bg);color:var(--verde)} .y{background:var(--amar-bg);color:#9A7A12} .r{background:var(--rojo-bg);color:var(--rojo)}
+  .n{background:var(--neutro-bg);color:var(--neutro)}
+  .totrow td{font-family:'Barlow Condensed';font-weight:700;font-size:14px;background:#F1F4F9;
+    border-top:2px solid var(--azul);border-bottom:none;color:var(--azul-tinta);padding:11px}
+  .totrow td.l{color:var(--azul)}
+  .totnote{font-size:11px;color:var(--gris);padding:8px 16px;background:#F7F9FC;border-top:1px solid var(--linea)}
+
+  .fpanel{position:fixed;z-index:60;background:#fff;border:1px solid var(--linea);border-radius:10px;
+    box-shadow:0 12px 34px rgba(22,36,63,.20);width:240px;padding:11px;display:none}
+  .fpanel-h{font-weight:700;color:var(--azul);font-size:12px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+  .fpanel-h .cnt{font-weight:600;color:var(--gris);font-size:11px}
+  .fpanel-list{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+  .fpanel-list label{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:6px;cursor:pointer;font-size:12.5px;color:var(--tinta)}
+  .fpanel-list label:hover{background:var(--papel)}
+  .fpanel-list input{accent-color:var(--azul);width:15px;height:15px}
+  .fpanel-act{display:flex;gap:8px;margin-top:9px}
+  .fpanel-act button{flex:1;padding:7px;border-radius:7px;border:1px solid var(--linea);background:var(--papel);
+    cursor:pointer;font-weight:600;font-size:12px;color:var(--azul)}
+  .fpanel-act button.prim{background:var(--azul);color:#fff;border-color:var(--azul)}
+
+  /* Modal de publicaciones */
+  .modal-bg{position:fixed;inset:0;background:rgba(22,36,63,.55);z-index:80;display:none;
+    align-items:flex-start;justify-content:center;padding:30px 16px;overflow:auto}
+  .modal{background:#fff;border-radius:14px;max-width:760px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .modal-h h3{font-family:'Barlow Condensed';font-weight:700;font-size:24px;color:var(--azul-tinta)}
+  .modal-h button{background:var(--papel);border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:15px;color:var(--gris)}
+  .modal-sub{font-size:12.5px;color:var(--gris);margin-bottom:14px}
+  .pubrow{border:1px solid var(--linea);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--papel)}
+  .pubrow .pn{font-weight:600;font-size:13px;color:var(--azul-tinta);display:flex;align-items:center;gap:7px;word-break:break-all}
+  .pubrow .pc{font-size:12px;color:var(--gris);margin:5px 0 9px}
+  .pubrow .pc b{color:var(--verde);font-weight:700}
+  .pubrow .pc .warn{color:var(--rojo);font-weight:600}
+  .pubsel{display:flex;gap:9px;flex-wrap:wrap}
+  .pubsel .pg{display:flex;flex-direction:column;gap:3px;flex:1;min-width:140px}
+  .pubsel label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);font-weight:600}
+  .pubsel select{font-size:12.5px;border:1px solid var(--linea);border-radius:7px;padding:7px 9px;background:#fff;cursor:pointer}
+  .pubsel select.miss{border-color:var(--rojo);background:#FFF6F5}
+  .repl{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--tinta);margin:12px 0 4px;cursor:pointer}
+  .repl input{width:16px;height:16px;accent-color:var(--azul)}
+  .modal-act{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+  .modal-act button{padding:10px 18px;border-radius:8px;border:1px solid var(--linea);background:var(--papel);
+    cursor:pointer;font-weight:600;font-size:13px;color:var(--azul)}
+  .modal-act button.prim{background:var(--azul);color:#fff;border-color:var(--azul)}
+  .modal-act button.prim:hover{background:var(--azul-2)}
+
+  .matsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .matsel button{font-family:'Inter';font-weight:600;font-size:12.5px;border:1px solid var(--linea);
+    background:var(--blanco);color:var(--gris);padding:8px 13px;border-radius:8px;cursor:pointer;transition:.15s}
+  .matsel button.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+  table.mat{min-width:840px}
+  table.mat thead th{text-align:center;padding:10px 8px}
+  table.mat thead th.l{text-align:left}
+  .grp-row td{background:#EEF1F6;color:var(--azul);font-family:'Barlow Condensed';font-weight:700;
+    font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding:6px 11px}
+  table.mat tbody td{text-align:center;padding:9px 8px}
+  table.mat tbody td.l{text-align:left;padding-left:22px}
+  .na{color:#C4CAD4;font-weight:600}
+  .cell-val{display:inline-block;min-width:42px;padding:3px 6px;border-radius:6px;font-weight:600}
+  .mat .tot td{font-family:'Barlow Condensed';font-weight:700;font-size:13.5px;background:#F1F4F9;border-top:2px solid var(--azul)}
+  .rowtot{font-weight:700;color:var(--azul-tinta)}
+
+  .note{background:#FFFDF7;border:1px solid #F0E2C0;border-left:4px solid var(--ambar);border-radius:10px;
+    padding:14px 16px;margin-top:24px;font-size:13px;color:#6B5A33}
+  .note b{color:#7A5B14}
+  .dropzone{border:2px dashed var(--azul-2);border-radius:12px;padding:20px;text-align:center;
+    background:#F7F9FC;color:var(--azul);font-size:13px;cursor:pointer;transition:.15s}
+  .dropzone:hover{background:#EEF3FA;border-color:var(--ambar)}
+  .dropzone b{display:block;font-family:'Barlow Condensed';font-size:17px;margin-bottom:3px}
+  .small{font-size:11.5px;color:var(--gris);margin-top:6px}
+  code{background:#EEF1F6;padding:1px 5px;border-radius:4px;font-size:12px;color:var(--azul)}
+  footer{margin-top:30px;text-align:center;font-size:11.5px;color:var(--gris)}
+  .page{display:none} .page.on{display:block}
+  .empty{padding:40px;text-align:center;color:var(--gris);font-size:13px}
+
+  @media(max-width:860px){
+    .kpis{grid-template-columns:1fr 1fr} .pais-grid{grid-template-columns:1fr}
+    .brand h1{font-size:28px} .criterio{flex-direction:column;align-items:flex-start}
+  }
+
+  /* ===== Login + sesión ===== */
+  .login-bg{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,var(--azul-tinta),var(--azul));
+    display:none;align-items:center;justify-content:center;padding:20px}
+  .login-card{background:#fff;border-radius:16px;padding:30px 28px;width:100%;max-width:380px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);border-top:4px solid var(--ambar)}
+  .login-brand{font-family:'Barlow Condensed';letter-spacing:.18em;text-transform:uppercase;font-size:12px;color:var(--gris);font-weight:600}
+  .login-card h2{font-family:'Barlow Condensed';font-weight:700;font-size:26px;color:var(--azul-tinta);margin:2px 0 16px}
+  .login-card label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);font-weight:600;margin:10px 0 4px}
+  .login-card input{width:100%;font-size:14px;border:1px solid var(--linea);border-radius:8px;padding:10px 12px;background:var(--papel)}
+  .login-card input:focus{outline:2px solid var(--ambar);background:#fff}
+  .login-btn{width:100%;margin-top:18px;background:var(--azul);color:#fff;border:none;border-radius:9px;padding:11px;font-weight:600;font-size:14px;cursor:pointer}
+  .login-btn:hover{background:var(--azul-2)}
+  .login-msg{margin-top:12px;font-size:12.5px;color:var(--rojo);min-height:16px}
+  .login-msg code{background:#FBF4DD;color:#7A5B14;padding:1px 5px;border-radius:4px}
+  .sesion{font-size:12px;color:#CDD9EE;align-self:center}
+  .sesion b{color:#fff}
+
+  /* ===== Pestaña Cobertura ===== */
+  .covstat{border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:14px;border:1px solid var(--linea)}
+  .covstat.ok{background:var(--verde-bg);border-color:#BFE6D5;color:#15634A}
+  .covstat.ok b{color:#0F4D38} .covstat.warn b{color:#7A5B14}
+  .covstat.warn{background:#FFFDF7;border-color:#F0E2C0;color:#7A5B14}
+  .covform{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--blanco);
+    border:1px solid var(--linea);border-radius:12px;padding:15px 16px}
+  .covpg{display:flex;flex-direction:column;gap:4px}
+  .covpg>label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);font-weight:600}
+  .covpg select{font-size:13px;border:1px solid var(--linea);border-radius:8px;padding:8px 10px;background:#fff;cursor:pointer;min-width:155px}
+  .covchk{display:flex;gap:13px;flex-wrap:wrap;padding:5px 0 2px}
+  .covchk label{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--tinta);font-weight:500;cursor:pointer}
+  .covchk input{width:15px;height:15px;accent-color:var(--azul)}
+  .btn-cov{font-family:'Inter';font-weight:600;font-size:13px;border:none;border-radius:8px;padding:9px 16px;cursor:pointer;background:var(--azul);color:#fff}
+  .btn-cov:hover{background:var(--azul-2)}
+  .btn-cov.ghost{background:var(--papel);color:var(--azul);border:1px solid var(--linea)}
+  .covdel{background:var(--rojo-bg);color:var(--rojo);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-weight:800;line-height:1}
+  .covdel:hover{filter:brightness(.96)}
+
+  #reporte{display:none}
+  .rep-page{padding:6mm 2mm}
+  .rep-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid var(--azul);padding-bottom:8px;margin-bottom:14px}
+  .rep-head .rt{font-family:'Barlow Condensed';font-weight:700;font-size:26px;color:var(--azul-tinta);line-height:1}
+  .rep-head .rt small{display:block;font-size:12px;color:var(--gris);font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+  .rep-head .rd{font-size:11px;color:var(--gris);text-align:right}
+  .rep-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+  .rep-k{border:1px solid var(--linea);border-radius:8px;padding:9px 10px}
+  .rep-k .l{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);font-weight:600}
+  .rep-k .v{font-family:'Barlow Condensed';font-weight:700;font-size:24px;line-height:1.05;margin-top:3px}
+  .rep-k.g .v{color:var(--verde)} .rep-k.y .v{color:#9A7A12} .rep-k.r .v{color:var(--rojo)} .rep-k.b .v{color:var(--azul)} .rep-k.n .v{color:var(--neutro)}
+  .rep-sub{font-family:'Barlow Condensed';font-weight:700;font-size:15px;color:var(--azul);text-transform:uppercase;letter-spacing:.03em;margin:12px 0 7px;border-bottom:1px solid var(--linea);padding-bottom:3px}
+  table.rep{width:100%;border-collapse:collapse;font-size:10.5px;min-width:0}
+  table.rep th{background:var(--azul);color:#fff;font-size:9px;text-transform:uppercase;letter-spacing:.03em;padding:5px 7px;text-align:right}
+  table.rep th.l{text-align:left}
+  table.rep td{padding:5px 7px;text-align:right;border-bottom:1px solid var(--linea)}
+  table.rep td.l{text-align:left}
+  .rep-pill{font-weight:700;padding:1px 6px;border-radius:12px;font-size:9.5px}
+  .acc{margin:5px 0 0;padding-left:0;list-style:none}
+  .acc li{font-size:11px;padding:5px 0 5px 18px;position:relative;border-bottom:1px solid #F0F0F0}
+  .acc li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:2px}
+  .acc li.r::before{background:var(--rojo)} .acc li.y::before{background:var(--amar)} .acc li.g::before{background:var(--verde)}
+  .acc li b{color:var(--azul-tinta)}
+  .rep-foot{margin-top:14px;border-top:2px solid var(--ambar);padding-top:6px;font-size:9px;color:var(--gris);display:flex;justify-content:space-between}
+
+  @media print{
+    @page{size:A4;margin:11mm}
+    .head-actions,.dropzone,.tabs,.matsel,.chips,.fpanel,.modal-bg{display:none!important}
+    body{background:#fff}
+    body.modo-reporte>*:not(#reporte){display:none!important}
+    body.modo-reporte #reporte{display:block!important}
+    body:not(.modo-reporte) #reporte{display:none!important}
+    .rep-page{page-break-after:always}
+    .rep-page:last-child{page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+<div class="login-bg" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-brand">Masia Group · Cumplimiento</div>
+    <h2>Iniciar sesión</h2>
+    <div id="liForm">
+      <label>Correo</label>
+      <input id="liEmail" type="email" autocomplete="username" placeholder="tucorreo@empresa.com">
+      <label>Contraseña</label>
+      <input id="liPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="login-btn" onclick="doLogin()">Entrar</button>
+    </div>
+    <div id="liMsg" class="login-msg"></div>
+  </div>
+</div>
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <div class="eyebrow">Masia Group · Gestión E-commerce</div>
+      <h1>Cumplimiento de <b>Publicaciones</b></h1>
+    </div>
+    <div class="head-actions">
+      <button class="btn btn-ghost solo-admin" id="btnMatriz" onclick="document.getElementById('fileMatriz').click()">📋 Cargar matriz</button>
+      <input id="fileMatriz" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="cargarMatriz(event)">
+      <button class="btn btn-solid" onclick="document.getElementById('filePub').click()">📦 Cargar publicaciones</button>
+      <input id="filePub" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarPublicaciones(event)">
+      <button class="btn btn-ghost" onclick="pdfPanel()">🖨 PDF panel</button>
+      <button class="btn btn-ghost" onclick="pdfEjecutivo()">📄 PDF ejecutivo</button>
+      <span id="sesion" class="sesion"></span>
+      <button id="btnLogout" class="btn btn-ghost" onclick="doLogout()" style="display:none">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab on" id="tab1" onclick="setPage(1)">Detalle por plataforma</button>
+    <button class="tab" id="tab2" onclick="setPage(2)">Resumen general · Matriz</button>
+    <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
+  </div>
+
+  <div class="criterio">
+    <div class="lbl">
+      <b>Criterio de "publicable" (matriz):</b> <b>Estricto</b> = con stock <u>y</u> precio ·
+      <b>Amplio</b> = con precio (stock opcional). Define el denominador SKUs Matriz y Pub. Matriz.
+    </div>
+    <div class="toggle">
+      <button id="t-est" class="on" onclick="setCriterio('estricto')">Estricto</button>
+      <button id="t-amp" onclick="setCriterio('amplio')">Amplio</button>
+    </div>
+  </div>
+
+  <!-- ===================== PÁGINA 1 ===================== -->
+  <div class="page on" id="page1">
+    <div class="kpis" id="kpis"></div>
+    <div class="chips" id="chips"></div>
+
+    <div class="sec">
+      <div class="sec-h">
+        <h2>Cumplimiento por país</h2>
+        <span class="hint">Barra sólida = % SKU · barra fina = % Publicaciones</span>
+      </div>
+      <div class="pais-grid" id="paises"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">
+        <h2>Detalle por plataforma</h2>
+        <span class="hint">Clic en ▾ del encabezado para filtrar · clic en el título para ordenar</span>
+      </div>
+      <div class="tbl-wrap">
+        <table id="tblDetalle"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+        <div class="totnote" id="totnote"></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>Flujo de datos:</b> la <b>matriz</b> (semanal) llena el <i>deber ser</i> — SKUs Matriz y Pub. Matriz. Los <b>exports de publicaciones</b> (MercadoLibre, Amazon, eBay, Shopify por país) llenan lo <i>real</i> — SKUs publicados (distintos) y Publicaciones (listings). El panel cruza ambos por País · Canal · Empresa.<br>
+      • % SKU = SKUs publicados ÷ SKUs Matriz · % Pub. = Publicaciones ÷ Pub. Matriz.<br>
+      • En el total los SKUs NO se suman: se cuentan productos únicos (catálogo más amplio por empresa-país). Las publicaciones sí se suman.<br>
+      • Semáforo: <b style="color:var(--verde)">90–100% verde</b> · <b style="color:#9A7A12">75–90% amarillo</b> · <b style="color:var(--rojo)">0–75% rojo</b> · <b style="color:var(--neutro)">— sin matriz cargada</b>
+    </div>
+  </div>
+
+  <!-- ===================== PÁGINA 2 ===================== -->
+  <div class="page" id="page2">
+    <div class="sec" style="margin-top:18px">
+      <div class="sec-h">
+        <h2>Matriz canal × país</h2>
+        <span class="hint">— = no opera en ese país · 0 = opera sin publicaciones</span>
+      </div>
+      <div class="matsel" id="matsel">
+        <button data-m="pctSKU" class="on" onclick="setMetrica('pctSKU')">% SKU</button>
+        <button data-m="pctPUB" onclick="setMetrica('pctPUB')">% Publicaciones</button>
+        <button data-m="pub" onclick="setMetrica('pub')">Publicaciones</button>
+        <button data-m="skuPb" onclick="setMetrica('skuPb')">SKUs publicados</button>
+      </div>
+      <div class="tbl-wrap"><table class="mat" id="mat"></table></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Formato de archivos</h2></div>
+      <div class="dropzone" onclick="document.getElementById('fileMatriz').click()">
+        <b>📋 Matriz (deber ser) — hoja "EN", nivel SKU</b>
+        <code>Empresa</code> · <code>Tipo de Publicacion</code> · <code>SKU Corto</code> · <code>Tiene Precio</code>
+        <div class="small">Carga la matriz completa. El panel cuenta <b>publicaciones</b> = filas con <code>Tiene Precio = SI</code>, y <b>SKUs</b> = SKU Corto distintos por empresa. Define dónde se publican en la pestaña <b>Cobertura</b>.</div>
+      </div>
+      <div class="dropzone" style="margin-top:12px" onclick="document.getElementById('filePub').click()">
+        <b>📦 Publicaciones (real) — un archivo por tienda</b>
+        Export de MercadoLibre / Amazon / eBay / Shopify. Cuento <b>filas = publicaciones</b> y <b>SKUs distintos = publicados</b>.
+        <div class="small">Detecto la columna de SKU (SKU, seller-sku, Custom label, Variant SKU, Código…) y el país/canal/empresa por el nombre del archivo. Puedes corregir la asignación antes de cargar.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PÁGINA 3 · COBERTURA ===================== -->
+  <div class="page" id="page3">
+    <div class="sec" style="margin-top:18px">
+      <div class="sec-h">
+        <h2>Cobertura · País × Empresa × Canal</h2>
+        <span class="hint">Define dónde operas. <b>Pub. Matriz</b> y <b>SKUs Matriz</b> salen de la matriz cargada (solo productos con precio).</span>
+      </div>
+      <div id="covStatus" class="covstat warn"></div>
+      <div class="covform solo-admin">
+        <div class="covpg"><label>País</label><select id="covPais"></select></div>
+        <div class="covpg"><label>Empresa</label><select id="covEmp"></select></div>
+        <div class="covpg"><label>Canales</label>
+          <div class="covchk">
+            <label><input type="checkbox" class="covcanal" value="Masia Shop">Masia Shop</label>
+            <label><input type="checkbox" class="covcanal" value="Mercado Libre">Mercado Libre</label>
+            <label><input type="checkbox" class="covcanal" value="Amazon">Amazon</label>
+            <label><input type="checkbox" class="covcanal" value="eBay">eBay</label>
+            <label><input type="checkbox" class="covcanal" value="Camozzi Shop">Camozzi Shop</label>
+          </div>
+        </div>
+        <button class="btn-cov" onclick="agregarCobertura()">+ Agregar</button>
+        <button class="btn-cov ghost" onclick="vaciarCobertura()">Vaciar todo</button>
+      </div>
+      <div class="tbl-wrap" style="margin-top:14px"><div id="covTabla"></div></div>
+      <div class="note">
+        <b>Cómo se llenan los números:</b> cada fila externa (Amazon / eBay / Mercado Libre) toma el <i>deber ser</i> de <b>su empresa</b> en la matriz — el mismo denominador en todos los canales externos de esa empresa.
+        La <b>Masia Shop</b> agrégala como una fila por empresa: el total del país las suma (una sola tienda para todas las empresas).
+        El lado <i>real</i> (lo efectivamente publicado) se carga con <b>📦 Cargar publicaciones</b>.
+      </div>
+    </div>
+  </div>
+
+  <footer>Masia Group · Dashboard de cumplimiento e-commerce · 6 países · Datos demo editables</footer>
+</div>
+
+<!-- Panel de filtro flotante -->
+<div class="fpanel" id="filterPanel">
+  <div class="fpanel-h"><span id="fpTitle"></span><span class="cnt" id="fpCnt"></span></div>
+  <div class="fpanel-list" id="fpList"></div>
+  <div class="fpanel-act">
+    <button onclick="fpToggleAll()">Marcar/limpiar</button>
+    <button class="prim" onclick="fpAplicar()">Aplicar</button>
+  </div>
+</div>
+
+<!-- Modal de carga de publicaciones -->
+<div class="modal-bg" id="modalPub">
+  <div class="modal">
+    <div class="modal-h">
+      <h3>Cargar publicaciones existentes</h3>
+      <button onclick="cerrarModal()">✕</button>
+    </div>
+    <p class="modal-sub">Revisa cada archivo: conteo detectado y a qué tienda (país · canal · empresa) se asigna. Corrige lo que haga falta y carga al dashboard.</p>
+    <div id="pubList"></div>
+    <label class="repl"><input type="checkbox" id="replDemo"> Reemplazar los datos actuales (empezar de cero con lo cargado)</label>
+    <div class="modal-act">
+      <button onclick="cerrarModal()">Cancelar</button>
+      <button class="prim" onclick="aplicarPublicaciones()">Cargar al dashboard</button>
+    </div>
+  </div>
+</div>
+
+<div id="reporte"></div>
+
+<script>
+// ===== Listas maestras =====
+const FLAGS={"México":"🇲🇽","Colombia":"🇨🇴","Estados Unidos":"🇺🇸","Brasil":"🇧🇷","Venezuela":"🇻🇪","España":"🇪🇸"};
+const ORD_PAIS=["México","Colombia","Estados Unidos","Brasil","Venezuela","España"];
+const CANALES=["Masia Shop","Mercado Libre","Amazon","eBay","Camozzi Shop"];
+const EMPRESAS=["Masia Group","Masia Rentals","Masia Compressores","Xstore","Camozzi"];
+
+function f(pais,canal,empresa,smE,smA,skuPb,pmE,pmA,pub){return {pais,canal,empresa,smE,smA,skuPb,pmE,pmA,pub}}
+const DEMO=[
+  f("México","Masia Shop","Masia Group",4383,5100,4229,43103,50000,40948),
+  f("México","Mercado Libre","Masia Group",2516,3000,2305,26704,31000,23682),
+  f("México","Mercado Libre","Masia Rentals",320,400,210,980,1200,640),
+  f("México","Mercado Libre","Masia Compressores",114,150,69,169,210,125),
+  f("México","Mercado Libre","Xstore",850,1050,402,1700,2100,720),
+  f("Colombia","Masia Shop","Masia Group",4500,5200,4180,44000,51000,41200),
+  f("Colombia","Mercado Libre","Masia Group",2600,3100,2280,27000,31500,22800),
+  f("Colombia","Mercado Libre","Masia Rentals",330,410,205,1000,1250,610),
+  f("Colombia","Mercado Libre","Masia Compressores",120,155,88,175,215,150),
+  f("Colombia","Mercado Libre","Xstore",880,1080,470,1760,2160,860),
+  f("Colombia","Camozzi Shop","Camozzi",1900,2300,1720,9500,11500,8600),
+  f("Colombia","Mercado Libre","Camozzi",1100,1350,540,3300,4050,1450),
+  f("Estados Unidos","Masia Shop","Masia Group",4800,5500,4612,47000,54000,45100),
+  f("Estados Unidos","Mercado Libre","Masia Group",2400,2900,1420,25000,29000,14800),
+  f("Estados Unidos","eBay","Masia Group",2400,2900,860,25000,29000,8200),
+  f("Estados Unidos","Mercado Libre","Masia Rentals",360,440,140,1100,1350,420),
+  f("Estados Unidos","eBay","Masia Rentals",360,440,72,1100,1350,180),
+  f("Estados Unidos","Mercado Libre","Masia Compressores",130,165,101,220,270,210),
+  f("Estados Unidos","eBay","Masia Compressores",130,165,40,220,270,82),
+  f("Estados Unidos","Mercado Libre","Xstore",900,1100,360,1800,2200,640),
+  f("Estados Unidos","eBay","Xstore",900,1100,140,1800,2200,240),
+  f("Brasil","Masia Shop","Masia Group",3200,3900,2010,32000,39000,20400),
+  f("Brasil","Mercado Libre","Masia Group",1800,2200,1120,18000,22000,11400),
+  f("Brasil","Mercado Libre","Masia Rentals",280,350,95,850,1050,290),
+  f("Brasil","Mercado Libre","Masia Compressores",110,140,79,170,210,165),
+  f("Brasil","Mercado Libre","Xstore",700,880,210,1400,1750,380),
+  f("Venezuela","Masia Shop","Masia Group",4100,4800,3880,41000,48000,39200),
+  f("Venezuela","Mercado Libre","Masia Group",2300,2800,2090,24000,28000,21600),
+  f("Venezuela","Mercado Libre","Masia Rentals",310,390,220,950,1180,640),
+  f("Venezuela","Mercado Libre","Masia Compressores",135,170,117,270,330,268),
+  f("Venezuela","Mercado Libre","Xstore",860,1060,510,1720,2120,960),
+  f("Venezuela","Camozzi Shop","Camozzi",1850,2250,1680,9250,11250,8400),
+  f("Venezuela","Mercado Libre","Camozzi",1050,1300,560,3150,3900,1500),
+  f("España","Amazon","Masia Group",2200,2700,1240,11000,13500,6200),
+  f("España","eBay","Masia Group",2100,2600,620,10500,13000,3100),
+];
+
+let DATA=clone(DEMO);
+let CRITERIO='estricto', METRICA='pctSKU', PAGE=1;
+let MATRIZ_AGG={}; // empresa -> {pub, sku} : deber ser (solo con precio), derivado de la matriz
+let FILT={pais:new Set(),canal:new Set(),empresa:new Set()};
+let SORT={col:null,dir:1};
+let FP={col:null};
+let PEND=[]; // archivos de publicaciones pendientes de confirmar
+function clone(o){return JSON.parse(JSON.stringify(o))}
+
+const skuMz=r=>CRITERIO==='estricto'?r.smE:r.smA;
+const pubMz=r=>CRITERIO==='estricto'?r.pmE:r.pmA;
+const pctSKU=r=>{const d=skuMz(r);return d?Math.round(r.skuPb/d*100):null};
+const pctPUB=r=>{const d=pubMz(r);return d?Math.round(r.pub/d*100):null};
+const cls=p=>p>=90?'g':p>=75?'y':'r';
+const col=p=>p>=90?'var(--verde)':p>=75?'var(--amar)':'var(--rojo)';
+const tint=p=>p>=90?'var(--verde-bg)':p>=75?'var(--amar-bg)':'var(--rojo-bg)';
+const fmt=n=>n.toLocaleString('es');
+function pill(p){return p==null?`<span class="pillpct n">—</span>`:`<span class="pillpct ${cls(p)}">${p}%</span>`}
+function matCell(p){return p==null?`<span class="cell-val" style="background:var(--neutro-bg);color:var(--neutro)">—</span>`
+  :`<span class="cell-val" style="background:${tint(p)};color:${col(p)}">${p}%</span>`}
+
+const COLS=[
+  {key:'pais',lab:'País',tipo:'cat',align:'l'},
+  {key:'canal',lab:'Canal',tipo:'cat',align:'l'},
+  {key:'empresa',lab:'Empresa',tipo:'cat',align:'l'},
+  {key:'skuPb',lab:'SKUs Pub.',sub:'publicados',tipo:'num'},
+  {key:'skuMz',lab:'SKUs Matriz',sub:'deber ser',tipo:'num'},
+  {key:'pctSKU',lab:'% SKU',sub:'cobertura',tipo:'num'},
+  {key:'pub',lab:'Publicaciones',sub:'P/N OEM',tipo:'num'},
+  {key:'pubMz',lab:'Pub. Matriz',sub:'deber ser',tipo:'num'},
+  {key:'pctPUB',lab:'% Pub.',sub:'profundidad',tipo:'num'},
+];
+function cellVal(r,key){
+  switch(key){
+    case 'pais':return r.pais; case 'canal':return r.canal; case 'empresa':return r.empresa;
+    case 'skuPb':return r.skuPb; case 'skuMz':return skuMz(r); case 'pctSKU':{const v=pctSKU(r);return v==null?-1:v};
+    case 'pub':return r.pub; case 'pubMz':return pubMz(r); case 'pctPUB':{const v=pctPUB(r);return v==null?-1:v};
+  }
+}
+function filas(){
+  let rs=DATA.filter(r=>['pais','canal','empresa'].every(c=>FILT[c].size===0||FILT[c].has(r[c])));
+  if(SORT.col){
+    const c=COLS.find(x=>x.key===SORT.col);
+    rs=rs.slice().sort((a,b)=>{
+      let va=cellVal(a,SORT.col),vb=cellVal(b,SORT.col);
+      if(c.tipo==='cat')return va.localeCompare(vb)*SORT.dir;
+      return (va-vb)*SORT.dir;
+    });
+  } else {
+    rs=rs.slice().sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)
+      ||a.empresa.localeCompare(b.empresa)||a.canal.localeCompare(b.canal));
+  }
+  return rs;
+}
+function unicos(rows,campo){
+  const grp={};
+  rows.forEach(r=>{const k=r.pais+'|'+r.empresa;const v=campo==='skuPb'?r.skuPb:skuMz(r);grp[k]=Math.max(grp[k]||0,v)});
+  return Object.values(grp).reduce((a,b)=>a+b,0);
+}
+function totales(rows){
+  const skuU=unicos(rows,'skuPb'),skuMzU=unicos(rows,'skuMz');
+  let pub=0,pubM=0;rows.forEach(r=>{pub+=r.pub;pubM+=pubMz(r)});
+  return {skuU,skuMzU,pSKU:skuMzU?Math.round(skuU/skuMzU*100):null,pub,pubM,pPUB:pubM?Math.round(pub/pubM*100):null};
+}
+
+function renderKPIs(){
+  const t=totales(filas());
+  const sc=t.pSKU==null?'is-n':'is-'+cls(t.pSKU), pc=t.pPUB==null?'is-n':'is-'+cls(t.pPUB);
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi ${sc}"><div class="k-lab">Cumplimiento SKU</div>
+      <div class="k-val">${t.pSKU==null?'—':t.pSKU+'<small>%</small>'}</div>
+      <div class="k-sub">${fmt(t.skuU)} SKUs únicos de ${fmt(t.skuMzU)} en matriz</div></div>
+    <div class="kpi ${pc}"><div class="k-lab">Cumplimiento Publicaciones</div>
+      <div class="k-val">${t.pPUB==null?'—':t.pPUB+'<small>%</small>'}</div>
+      <div class="k-sub">${fmt(t.pub)} publicadas de ${fmt(t.pubM)} posibles</div></div>
+    <div class="kpi k-blue"><div class="k-lab">SKUs únicos publicados</div>
+      <div class="k-val">${fmt(t.skuU)}</div>
+      <div class="k-sub">productos distintos (sin doble conteo)</div></div>
+    <div class="kpi k-amb"><div class="k-lab">Publicaciones activas</div>
+      <div class="k-val">${fmt(t.pub)}</div>
+      <div class="k-sub">listings por número de parte OEM</div></div>`;
+}
+function renderChips(){
+  const c=document.getElementById('chips');const labels={pais:'País',canal:'Canal',empresa:'Empresa'};
+  let h='';let any=false;
+  ['pais','canal','empresa'].forEach(k=>{
+    if(FILT[k].size>0){any=true;
+      h+=`<span class="chip-f"><span class="lbl">${labels[k]}:</span> ${[...FILT[k]].join(', ')}
+        <span class="chip-x" onclick="quitarFiltro('${k}')">✕</span></span>`;}
+  });
+  if(any)h+=`<button class="chip-clear" onclick="limpiar()">Limpiar todo</button>`;
+  else h=`<span class="hintf">Sin filtros — usa ▾ en los encabezados de la tabla para filtrar por País, Canal o Empresa.</span>`;
+  c.innerHTML=h;
+}
+function quitarFiltro(k){FILT[k]=new Set();render()}
+function limpiar(){FILT={pais:new Set(),canal:new Set(),empresa:new Set()};render()}
+
+function renderPaises(){
+  const rows=filas();
+  const paises=[...new Set(rows.map(r=>r.pais))].sort((a,b)=>ORD_PAIS.indexOf(a)-ORD_PAIS.indexOf(b));
+  let h='';
+  paises.forEach(p=>{
+    const t=totales(rows.filter(r=>r.pais===p));
+    const c=t.pSKU==null?'var(--neutro)':col(t.pSKU);
+    h+=`<div class="pais-card">
+      <div class="pais-top"><div class="nm"><span class="flag">${FLAGS[p]||''}</span>${p}</div>
+        <div class="pais-pct" style="color:${c}">${t.pSKU==null?'—':t.pSKU+'%'}</div></div>
+      <div class="bar"><span style="width:${Math.min(100,t.pSKU||0)}%;background:${c}"></span></div>
+      <div class="bar s2"><span style="width:${Math.min(100,t.pPUB||0)}%;background:var(--ambar)"></span></div>
+      <div class="pais-meta"><span><b>${fmt(t.skuU)}</b>/${fmt(t.skuMzU)} SKU · Pub <b>${t.pPUB==null?'—':t.pPUB+'%'}</b></span>
+        <span><b>${fmt(t.pub)}</b> publicaciones</span></div>
+    </div>`;
+  });
+  document.getElementById('paises').innerHTML=h||'<div class="empty">Sin datos para el filtro seleccionado.</div>';
+}
+function renderHead(){
+  let h='<tr>';
+  COLS.forEach(c=>{
+    const isSort=SORT.col===c.key;
+    const arr=isSort?(SORT.dir>0?'▲':'▼'):'↕';
+    const filtro=(c.tipo==='cat')
+      ?`<button class="th-filter ${FILT[c.key]&&FILT[c.key].size>0?'act':''}" onclick="abrirFiltro('${c.key}',this,event)">▾</button>`:'';
+    const sub=c.sub?`<span class="u">${c.sub}</span>`:'';
+    h+=`<th class="${c.align==='l'?'l':''}">
+      <span class="th-sort" onclick="ordenar('${c.key}')">${c.lab} <i class="arr ${isSort?'on':''}">${arr}</i></span>
+      ${filtro}${sub}</th>`;
+  });
+  document.getElementById('thead').innerHTML=h+'</tr>';
+}
+function ordenar(key){if(SORT.col===key)SORT.dir*=-1;else{SORT.col=key;SORT.dir=1}render()}
+
+function renderTabla(){
+  const rows=filas();let h='';
+  rows.forEach(r=>{
+    h+=`<tr>
+      <td class="l"><span class="pais-cell">${FLAGS[r.pais]||''} ${r.pais}</span></td>
+      <td class="l dim">${r.canal}</td>
+      <td class="l">${r.empresa}</td>
+      <td>${fmt(r.skuPb)}</td>
+      <td class="dim">${fmt(skuMz(r))}</td>
+      <td>${pill(pctSKU(r))}</td>
+      <td>${fmt(r.pub)}</td>
+      <td class="dim">${fmt(pubMz(r))}</td>
+      <td>${pill(pctPUB(r))}</td>
+    </tr>`;
+  });
+  if(!rows.length)h='<tr><td colspan="9" class="empty">Sin datos para el filtro seleccionado.</td></tr>';
+  const t=totales(rows);
+  h+=`<tr class="totrow">
+    <td class="l" colspan="3">TOTAL (${rows.length} plataformas)</td>
+    <td>${fmt(t.skuU)}</td><td>${fmt(t.skuMzU)}</td><td>${pill(t.pSKU)}</td>
+    <td>${fmt(t.pub)}</td><td>${fmt(t.pubM)}</td><td>${pill(t.pPUB)}</td></tr>`;
+  document.getElementById('tbody').innerHTML=h;
+  document.getElementById('totnote').innerHTML=
+    `Los SKUs del total son <b>productos únicos</b>: por empresa y país se cuenta el catálogo publicado más amplio entre plataformas, no la suma. Las publicaciones sí se suman.`;
+}
+
+// ===== Panel de filtro =====
+function abrirFiltro(key,btn,ev){
+  ev.stopPropagation();FP.col=key;
+  const vals=[...new Set(DATA.map(r=>r[key]))].sort();
+  const sel=FILT[key];const todos=sel.size===0;
+  document.getElementById('fpTitle').textContent='Filtrar '+(COLS.find(c=>c.key===key).lab);
+  document.getElementById('fpCnt').textContent=vals.length+' valores';
+  document.getElementById('fpList').innerHTML=vals.map(v=>
+    `<label><input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${todos||sel.has(v)?'checked':''}> ${v}</label>`).join('');
+  const p=document.getElementById('filterPanel');p.style.display='block';
+  const rect=btn.getBoundingClientRect();
+  let left=rect.left,top=rect.bottom+5;
+  if(left+250>window.innerWidth)left=window.innerWidth-258; if(left<8)left=8;
+  p.style.left=left+'px';p.style.top=top+'px';
+}
+function fpToggleAll(){const b=[...document.querySelectorAll('#fpList input')];const on=b.every(x=>x.checked);b.forEach(x=>x.checked=!on)}
+function fpAplicar(){
+  const b=[...document.querySelectorAll('#fpList input')];
+  const ck=b.filter(x=>x.checked).map(x=>x.value);
+  FILT[FP.col]=(ck.length===b.length)?new Set():new Set(ck);
+  closeFP();render();
+}
+function closeFP(){document.getElementById('filterPanel').style.display='none';FP.col=null}
+document.addEventListener('click',e=>{
+  const p=document.getElementById('filterPanel');
+  if(p.style.display==='block'&&!p.contains(e.target)&&!e.target.classList.contains('th-filter'))closeFP();
+});
+window.addEventListener('resize',closeFP);
+
+// ===== Matriz =====
+function getFila(pais,canal,empresa){return DATA.find(r=>r.pais===pais&&r.canal===canal&&r.empresa===empresa)||null}
+const COMBOS=[
+  {emp:"Masia Group",grp:["Masia Shop","Mercado Libre","Amazon","eBay"]},
+  {emp:"Masia Rentals",grp:["Mercado Libre","eBay"]},
+  {emp:"Masia Compressores",grp:["Mercado Libre","eBay"]},
+  {emp:"Xstore",grp:["Mercado Libre","eBay"]},
+  {emp:"Camozzi",grp:["Camozzi Shop","Mercado Libre"]},
+];
+function valCeldaM(r){
+  if(METRICA==='pctSKU')return pctSKU(r);
+  if(METRICA==='pctPUB')return pctPUB(r);
+  if(METRICA==='pub')return r.pub;
+  return r.skuPb;
+}
+const esPct=()=>METRICA==='pctSKU'||METRICA==='pctPUB';
+function renderMatriz(){
+  // empresas/canales presentes en DATA (para soportar datos cargados nuevos)
+  const combosDin=EMPRESAS.map(emp=>({emp,grp:CANALES.filter(canal=>ORD_PAIS.some(p=>getFila(p,canal,emp)))})).filter(c=>c.grp.length);
+  const combos=combosDin.length?combosDin:COMBOS;
+  let h='<thead><tr><th class="l">Empresa · Canal</th>';
+  ORD_PAIS.forEach(p=>h+=`<th>${FLAGS[p]||''}<br>${p.replace('Estados Unidos','USA')}</th>`);
+  h+='<th class="rowtot">Total</th></tr></thead><tbody>';
+  combos.forEach(c=>{
+    h+=`<tr class="grp-row"><td colspan="${ORD_PAIS.length+2}">${c.emp}</td></tr>`;
+    c.grp.forEach(canal=>{
+      if(!ORD_PAIS.some(p=>getFila(p,canal,c.emp)))return;
+      h+=`<tr><td class="l">${canal}</td>`;
+      let rn=0,rd=0,rs=0;
+      ORD_PAIS.forEach(p=>{
+        const r=getFila(p,canal,c.emp);
+        if(!r){h+=`<td class="na" title="No opera en ${p}">—</td>`;return}
+        const v=valCeldaM(r);
+        if(esPct()){h+=`<td>${matCell(v)}</td>`;
+          if(METRICA==='pctSKU'){rn+=r.skuPb;rd+=skuMz(r)}else{rn+=r.pub;rd+=pubMz(r)}}
+        else{h+=`<td>${fmt(v)}</td>`;rs+=v}
+      });
+      if(esPct()){const rp=rd?Math.round(rn/rd*100):null;h+=`<td class="rowtot">${matCell(rp)}</td>`}
+      else h+=`<td class="rowtot">${fmt(rs)}</td>`;
+      h+='</tr>';
+    });
+  });
+  h+='<tr class="tot"><td class="l">TOTAL POR PAÍS</td>';
+  let gs=0;
+  ORD_PAIS.forEach(p=>{
+    const rs=DATA.filter(r=>r.pais===p);
+    if(!rs.length){h+='<td class="na">—</td>';return}
+    if(esPct()){let n=0,d=0;rs.forEach(r=>{if(METRICA==='pctSKU'){n+=r.skuPb;d+=skuMz(r)}else{n+=r.pub;d+=pubMz(r)}});
+      const pv=d?Math.round(n/d*100):null;h+=`<td>${matCell(pv)}</td>`}
+    else{let s=0;rs.forEach(r=>s+=valCeldaM(r));gs+=s;h+=`<td>${fmt(s)}</td>`}
+  });
+  if(esPct()){let n=0,d=0;DATA.forEach(r=>{if(METRICA==='pctSKU'){n+=r.skuPb;d+=skuMz(r)}else{n+=r.pub;d+=pubMz(r)}});
+    const gp=d?Math.round(n/d*100):null;h+=`<td class="rowtot">${matCell(gp)}</td>`}
+  else h+=`<td class="rowtot">${fmt(gs)}</td>`;
+  h+='</tr></tbody>';
+  document.getElementById('mat').innerHTML=h;
+}
+
+// ===== Render maestro =====
+function render(){renderKPIs();renderChips();renderPaises();renderHead();renderTabla();renderMatriz();renderCobertura()}
+function upd(idx,campo,el){
+  const v=parseInt(el.textContent.replace(/[^\d]/g,''))||0;
+  DATA[idx][campo]=v;clearTimeout(window._t);window._t=setTimeout(render,700);
+}
+function setCriterio(c){CRITERIO=c;
+  document.getElementById('t-est').classList.toggle('on',c==='estricto');
+  document.getElementById('t-amp').classList.toggle('on',c==='amplio');render()}
+function setMetrica(m){METRICA=m;
+  document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
+function setPage(n){PAGE=n;
+  for(let i=1;i<=3;i++){
+    document.getElementById('page'+i).classList.toggle('on',n===i);
+    document.getElementById('tab'+i).classList.toggle('on',n===i);
+  }}
+
+// ===== Carga de PUBLICACIONES (real) =====
+const SKU_CANDS=['sku','seller-sku','seller_sku','custom label (sku)','custom label','codigo','código',
+  'variant sku','codigo universal','código universal','part number','numero de parte','número de parte',
+  'sku del producto','codigo de producto','código de producto','referencia','ref'];
+function leerPubFile(file){
+  return new Promise(res=>{
+    const r=new FileReader();
+    r.onload=ev=>{try{
+      const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      const filas=rows.length;
+      let skuCol=null;
+      if(rows.length){
+        const keys=Object.keys(rows[0]);
+        skuCol=keys.find(k=>SKU_CANDS.includes(k.toLowerCase().trim()))||keys.find(k=>k.toLowerCase().includes('sku'));
+      }
+      let skusUnicos=filas;
+      if(skuCol){const s=new Set();rows.forEach(x=>{const v=(x[skuCol]||'').toString().trim();if(v)s.add(v)});skusUnicos=s.size||filas}
+      res({filas,skusUnicos,skuCol:skuCol||null});
+    }catch(err){res({filas:0,skusUnicos:0,error:err.message})}};
+    r.readAsArrayBuffer(file);
+  });
+}
+function detectarPCE(name){
+  const n=name.toLowerCase();
+  const tk=s=>new RegExp('(^|[_\\-\\. ])('+s+')([_\\-\\. ]|$)').test(n); // token aislado
+  let pais='';
+  if(/m[eé]xico|mexico/.test(n)||tk('mx'))pais='México';
+  else if(/colombia/.test(n)||tk('co'))pais='Colombia';
+  else if(/estados unidos|united states/.test(n)||tk('usa|us|eeuu'))pais='Estados Unidos';
+  else if(/brasil|brazil/.test(n)||tk('br'))pais='Brasil';
+  else if(/venezuela/.test(n)||tk('ve'))pais='Venezuela';
+  else if(/espa|spain/.test(n)||tk('es'))pais='España';
+  const camozzi=/camozzi/.test(n);
+  let canal='';
+  if(/mercado ?libre|meli|mlib/.test(n)||tk('ml'))canal='Mercado Libre';
+  else if(/amazon|amz/.test(n))canal='Amazon';
+  else if(/ebay/.test(n))canal='eBay';
+  else if(/shopify|shop/.test(n))canal=camozzi?'Camozzi Shop':'Masia Shop';
+  let empresa='';
+  if(camozzi)empresa='Camozzi';
+  else if(/rentals?/.test(n))empresa='Masia Rentals';
+  else if(/compres|compress/.test(n))empresa='Masia Compressores';
+  else if(/xstore/.test(n))empresa='Xstore';
+  else if(/group|masia/.test(n))empresa='Masia Group';
+  return {pais,canal,empresa};
+}
+async function cargarPublicaciones(e){
+  const files=[...e.target.files]; e.target.value='';
+  if(!files.length)return;
+  PEND=[];
+  for(const file of files){
+    const info=await leerPubFile(file);
+    const det=detectarPCE(file.name);
+    PEND.push({filename:file.name,...info,...det});
+  }
+  abrirModalPub();
+}
+function optSelect(arr,val){return '<option value="">—</option>'+arr.map(v=>`<option value="${v}" ${v===val?'selected':''}>${v}</option>`).join('')}
+function abrirModalPub(){
+  let h='';
+  PEND.forEach((p,i)=>{
+    const det=(p.pais&&p.canal&&p.empresa);
+    const cnt=p.error?`<span class="warn">No se pudo leer: ${p.error}</span>`
+      :`<b>${fmt(p.filas)}</b> publicaciones · <b>${fmt(p.skusUnicos)}</b> SKUs únicos ${p.skuCol?'(col. "'+p.skuCol+'")':'(sin columna SKU detectada — se usa nº de filas)'}`;
+    h+=`<div class="pubrow">
+      <div class="pn">📄 ${p.filename} ${det?'✅':'⚠️'}</div>
+      <div class="pc">${cnt}</div>
+      <div class="pubsel">
+        <div class="pg"><label>País</label><select class="${p.pais?'':'miss'}" onchange="setPend(${i},'pais',this.value)">${optSelect(ORD_PAIS,p.pais)}</select></div>
+        <div class="pg"><label>Canal</label><select class="${p.canal?'':'miss'}" onchange="setPend(${i},'canal',this.value)">${optSelect(CANALES,p.canal)}</select></div>
+        <div class="pg"><label>Empresa</label><select class="${p.empresa?'':'miss'}" onchange="setPend(${i},'empresa',this.value)">${optSelect(EMPRESAS,p.empresa)}</select></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('pubList').innerHTML=h;
+  document.getElementById('modalPub').style.display='flex';
+}
+function setPend(i,campo,val){PEND[i][campo]=val;
+  // refrescar marca de faltante sin recargar todo
+  abrirModalPub();
+}
+function cerrarModal(){document.getElementById('modalPub').style.display='none'}
+async function aplicarPublicaciones(){
+  const filas=[];let skip=0;
+  PEND.forEach(p=>{
+    if(!p.pais||!p.canal||!p.empresa||p.error){skip++;return}
+    filas.push({pais:p.pais,empresa:p.empresa,canal:p.canal,sku_pb:p.skusUnicos,pub:p.filas});
+  });
+  if(!filas.length){alert('No hay archivos asignados para cargar.'+(skip?` (${skip} omitidos)`:''));return}
+  try{
+    const {error}=await SB.from('publicaciones').upsert(filas,{onConflict:'pais,empresa,canal'});
+    if(error)throw error;
+    cerrarModal();
+    await cargarTodo();
+    alert(`✓ ${filas.length} tienda(s) actualizada(s).`+(skip?` ${skip} sin asignar se omitieron.`:''));
+  }catch(e){alert('No se pudo guardar: '+(e.message||e));}
+}
+
+// ===== Carga de MATRIZ (deber ser) — nivel SKU, se agrega por empresa =====
+function normEmp(e){const s=String(e==null?'':e).trim();return s.toUpperCase()==='XSTORE'?'Xstore':s}
+function empresasDisp(){const k=Object.keys(MATRIZ_AGG);return k.length?k.slice().sort():EMPRESAS}
+// Rellena los denominadores (deber ser) de cada fila de DATA según su empresa en la matriz.
+// Sin stock en la matriz: estricto y amplio coinciden (= con precio).
+function aplicarMatrizADatos(){
+  DATA.forEach(r=>{const a=MATRIZ_AGG[r.empresa];if(a){r.smE=a.sku;r.smA=a.sku;r.pmE=a.pub;r.pmA=a.pub;}});
+}
+function cargarMatriz(e){
+  const file=e.target.files[0];e.target.value='';if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{
+    const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+    const ws=wb.Sheets['EN']||wb.Sheets[wb.SheetNames[0]];
+    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    if(!aoa.length){alert('La hoja está vacía.');return}
+    // localizar la fila de encabezado (puede estar en la fila 1 o 2)
+    let hr=aoa.findIndex(row=>row&&row.some(c=>String(c).trim()==='Empresa')
+      &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio')));
+    if(hr<0)hr=0;
+    const H=aoa[hr].map(c=>String(c==null?'':c).trim());
+    const iEmp=H.indexOf('Empresa');
+    const iPre=H.findIndex(h=>h.toLowerCase().startsWith('tiene precio'));
+    let iCorto=H.indexOf('SKU Corto');if(iCorto<0)iCorto=H.findIndex(h=>h.toLowerCase().includes('sku corto'));
+    if(iEmp<0||iPre<0){alert('No encontré las columnas "Empresa" y "Tiene Precio" en la matriz.');return}
+    const agg={};
+    for(let i=hr+1;i<aoa.length;i++){
+      const row=aoa[i];if(!row)continue;
+      const rawE=row[iEmp];if(rawE==null||String(rawE).trim()==='')continue;
+      const emp=normEmp(rawE);
+      const pre=String(row[iPre]==null?'':row[iPre]).trim().toUpperCase();
+      if(pre!=='SI')continue; // sin precio = no publicable, no cuenta
+      if(!agg[emp])agg[emp]={pub:0,sku:new Set()};
+      agg[emp].pub++;
+      const sc=iCorto>=0?row[iCorto]:null;
+      if(sc!=null&&String(sc).trim()!=='')agg[emp].sku.add(String(sc).trim().toUpperCase());
+    }
+    if(!Object.keys(agg).length){alert('No se contó ninguna fila con precio. Revisa la columna "Tiene Precio".');return}
+    const filas=Object.keys(agg).map(k=>({empresa:k,pub:agg[k].pub,sku:agg[k].sku.size}));
+    guardarMatriz(filas); // upsert a Supabase + recarga + aviso
+  }catch(err){alert('No se pudo leer la matriz: '+err.message)}};
+  r.readAsArrayBuffer(file);
+}
+
+// ===== Pestaña Cobertura =====
+function renderCobertura(){
+  const ct=document.getElementById('covTabla');if(!ct)return;
+  const loaded=Object.keys(MATRIZ_AGG).length>0;
+  const st=document.getElementById('covStatus');
+  if(loaded){
+    const ne=Object.keys(MATRIZ_AGG).length;
+    const tp=Object.values(MATRIZ_AGG).reduce((a,b)=>a+b.pub,0);
+    const ts=Object.values(MATRIZ_AGG).reduce((a,b)=>a+b.sku,0);
+    st.className='covstat ok';
+    st.innerHTML=`✓ Matriz cargada — <b>${ne}</b> empresas · <b>${fmt(tp)}</b> publicaciones · <b>${fmt(ts)}</b> SKUs (deber ser, con precio). Los denominadores de cada fila salen de aquí.`;
+  }else{
+    st.className='covstat warn';
+    st.innerHTML='⚠ Sin matriz cargada. Pulsa <b>📋 Cargar matriz</b> (arriba) para que <b>Pub. Matriz</b> y <b>SKUs Matriz</b> se llenen solos.';
+  }
+  // selects
+  const ps=document.getElementById('covPais');
+  if(ps&&!ps.dataset.init){ps.innerHTML=ORD_PAIS.map(v=>`<option>${v}</option>`).join('');ps.dataset.init='1';}
+  const es=document.getElementById('covEmp');
+  if(es){const cur=es.value;es.innerHTML=empresasDisp().map(v=>`<option ${v===cur?'selected':''}>${v}</option>`).join('');}
+  // tabla
+  const admin=(typeof esAdmin==='function')&&esAdmin();
+  const nc=admin?6:5;
+  let h='<table class="mat" style="min-width:680px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Pub. Matriz</th><th>SKUs Matriz</th>'+(admin?'<th>Quitar</th>':'')+'</tr></thead><tbody>';
+  const rows=DATA.slice().sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)||a.empresa.localeCompare(b.empresa)||a.canal.localeCompare(b.canal));
+  if(!rows.length)h+=`<tr><td colspan="${nc}" class="empty">Sin filas de cobertura.${admin?' Agrega País · Empresa · Canal abajo.':''}</td></tr>`;
+  let pais0=null;
+  rows.forEach(r=>{
+    const a=MATRIZ_AGG[r.empresa];
+    if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="${nc}">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
+    const pm=a?fmt(a.pub):'<span class="na">—</span>';
+    const sm=a?fmt(a.sku):'<span class="na" title="Empresa sin coincidencia en la matriz">—</span>';
+    h+=`<tr><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
+      <td>${pm}</td><td>${sm}</td>`+
+      (admin?`<td><button class="covdel" onclick="eliminarCobertura('${r.pais}','${r.empresa}','${r.canal}')">✕</button></td>`:'')+`</tr>`;
+  });
+  h+='</tbody></table>';
+  ct.innerHTML=h;
+}
+async function agregarCobertura(){
+  if(!esAdmin()){alert('Solo el administrador puede editar la cobertura.');return}
+  const pais=document.getElementById('covPais').value;
+  const empresa=document.getElementById('covEmp').value;
+  const canales=[...document.querySelectorAll('.covcanal:checked')].map(c=>c.value);
+  if(!pais||!empresa||!canales.length){alert('Elige país, empresa y al menos un canal.');return}
+  const filas=canales.map(canal=>({pais,empresa,canal}));
+  try{
+    const {error}=await SB.from('cobertura').upsert(filas,{onConflict:'pais,empresa,canal',ignoreDuplicates:true});
+    if(error)throw error;
+    document.querySelectorAll('.covcanal:checked').forEach(c=>c.checked=false);
+    await cargarTodo();
+  }catch(e){alert('No se pudo agregar: '+(e.message||e));}
+}
+async function eliminarCobertura(pais,empresa,canal){
+  if(!esAdmin())return;
+  try{
+    const {error}=await SB.from('cobertura').delete().match({pais,empresa,canal});
+    if(error)throw error;
+    await cargarTodo();
+  }catch(e){alert('No se pudo quitar: '+(e.message||e));}
+}
+async function vaciarCobertura(){
+  if(!esAdmin())return;
+  if(!confirm('¿Vaciar TODAS las filas de cobertura?'))return;
+  try{
+    const {error}=await SB.from('cobertura').delete().neq('id',-1);
+    if(error)throw error;
+    await cargarTodo();
+  }catch(e){alert('No se pudo vaciar: '+(e.message||e));}
+}
+
+// ===== Reporte ejecutivo =====
+function accionesPais(p){
+  const rs=DATA.filter(r=>r.pais===p);const acc=[],fort=[];
+  rs.map(r=>({r,pS:pctSKU(r),pP:pctPUB(r),faltSKU:Math.max(0,skuMz(r)-r.skuPb),faltPUB:Math.max(0,pubMz(r)-r.pub)}))
+    .sort((a,b)=>b.faltSKU-a.faltSKU)
+    .forEach(o=>{
+      if(o.pS==null)return;
+      if(o.pS<75)acc.push({cls:'r',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: prioridad alta. Publicar ${fmt(o.faltSKU)} SKUs y ${fmt(o.faltPUB)} publicaciones (hoy ${o.pS}% SKU / ${o.pP==null?'—':o.pP+'%'} pub).`});
+      else if(o.pS<90)acc.push({cls:'y',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: cerrar brecha de ${fmt(o.faltSKU)} SKUs para llegar a verde (hoy ${o.pS}%).`});
+      else fort.push({cls:'g',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: al día, ${o.pS}% SKU / ${o.pP==null?'—':o.pP+'%'} pub.`});
+    });
+  return {acc:acc.slice(0,6),fort:fort.slice(0,3)};
+}
+function repK(lab,val,clase){return `<div class="rep-k ${clase}"><div class="l">${lab}</div><div class="v">${val}</div></div>`}
+function pp(p){return p==null?'<span class="rep-pill" style="background:var(--neutro-bg);color:var(--neutro)">—</span>'
+  :`<span class="rep-pill" style="background:${tint(p)};color:${col(p)}">${p}%</span>`}
+function repTabla(rs){
+  let h='<table class="rep"><thead><tr><th class="l">Canal</th><th class="l">Empresa</th><th>SKU Pub</th><th>SKU Mz</th><th>%SKU</th><th>Pub</th><th>Pub Mz</th><th>%Pub</th></tr></thead><tbody>';
+  rs.slice().sort((a,b)=>a.empresa.localeCompare(b.empresa)||a.canal.localeCompare(b.canal)).forEach(r=>{
+    h+=`<tr><td class="l">${r.canal}</td><td class="l">${r.empresa}</td>
+      <td>${fmt(r.skuPb)}</td><td>${fmt(skuMz(r))}</td><td>${pp(pctSKU(r))}</td>
+      <td>${fmt(r.pub)}</td><td>${fmt(pubMz(r))}</td><td>${pp(pctPUB(r))}</td></tr>`;
+  });
+  return h+'</tbody></table>';
+}
+function clsN(p){return p==null?'n':cls(p)}
+function buildReporte(){
+  const hoy=new Date().toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'});
+  const all=DATA,tg=totales(all);let H='';
+  H+=`<div class="rep-page"><div class="rep-head">
+      <div class="rt"><small>Masia Group · E-commerce</small>Resumen general de cumplimiento</div>
+      <div class="rd">${hoy}<br>Criterio: ${CRITERIO}</div></div>`;
+  H+=`<div class="rep-kpis">
+      ${repK('Cumpl. SKU',tg.pSKU==null?'—':tg.pSKU+'%',clsN(tg.pSKU))}
+      ${repK('Cumpl. Pub.',tg.pPUB==null?'—':tg.pPUB+'%',clsN(tg.pPUB))}
+      ${repK('SKUs únicos',fmt(tg.skuU),'b')}
+      ${repK('Publicaciones',fmt(tg.pub),'b')}
+      ${repK('SKUs faltantes',fmt(Math.max(0,tg.skuMzU-tg.skuU)),'r')}</div>`;
+  H+='<div class="rep-sub">Cumplimiento por país</div>';
+  H+='<table class="rep"><thead><tr><th class="l">País</th><th>SKU únicos</th><th>SKU matriz</th><th>%SKU</th><th>Publicaciones</th><th>Pub matriz</th><th>%Pub</th><th>Plataformas</th></tr></thead><tbody>';
+  ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).map(p=>({p,t:totales(all.filter(r=>r.pais===p)),n:all.filter(r=>r.pais===p).length}))
+    .sort((a,b)=>(b.t.pSKU||0)-(a.t.pSKU||0)).forEach(o=>{
+    H+=`<tr><td class="l">${FLAGS[o.p]||''} ${o.p}</td>
+      <td>${fmt(o.t.skuU)}</td><td>${fmt(o.t.skuMzU)}</td><td>${pp(o.t.pSKU)}</td>
+      <td>${fmt(o.t.pub)}</td><td>${fmt(o.t.pubM)}</td><td>${pp(o.t.pPUB)}</td><td>${o.n}</td></tr>`;});
+  H+=`<tr style="font-weight:700;border-top:2px solid var(--azul)"><td class="l">TOTAL RED</td>
+      <td>${fmt(tg.skuU)}</td><td>${fmt(tg.skuMzU)}</td><td>${pp(tg.pSKU)}</td>
+      <td>${fmt(tg.pub)}</td><td>${fmt(tg.pubM)}</td><td>${pp(tg.pPUB)}</td><td>${all.length}</td></tr></tbody></table>`;
+  const topGap=all.map(r=>({r,pS:pctSKU(r),falt:Math.max(0,skuMz(r)-r.skuPb)})).filter(o=>o.pS!=null&&o.pS<90).sort((a,b)=>b.falt-a.falt).slice(0,6);
+  H+='<div class="rep-sub">Acciones prioritarias de la red</div><ul class="acc">';
+  if(topGap.length)topGap.forEach(o=>{H+=`<li class="${o.pS<75?'r':'y'}"><b>${o.r.pais} · ${o.r.empresa} · ${o.r.canal}</b> — publicar ${fmt(o.falt)} SKUs (hoy ${o.pS}%).</li>`});
+  else H+='<li class="g">Sin brechas relevantes o falta cargar la matriz para medir cumplimiento.</li>';
+  H+=`</ul><div class="rep-foot"><span>Masia Group · Gestión E-commerce</span><span>Confidencial · uso interno</span></div></div>`;
+  ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).forEach(p=>{
+    const rs=all.filter(r=>r.pais===p);const t=totales(rs);const {acc,fort}=accionesPais(p);
+    H+=`<div class="rep-page"><div class="rep-head">
+        <div class="rt"><small>Masia Group · E-commerce</small>${FLAGS[p]||''} ${p}</div>
+        <div class="rd">${hoy}<br>Criterio: ${CRITERIO}</div></div>`;
+    H+=`<div class="rep-kpis">
+        ${repK('Cumpl. SKU',t.pSKU==null?'—':t.pSKU+'%',clsN(t.pSKU))}
+        ${repK('Cumpl. Pub.',t.pPUB==null?'—':t.pPUB+'%',clsN(t.pPUB))}
+        ${repK('SKUs únicos',fmt(t.skuU)+'/'+fmt(t.skuMzU),'b')}
+        ${repK('Publicaciones',fmt(t.pub),'b')}
+        ${repK('SKUs faltantes',fmt(Math.max(0,t.skuMzU-t.skuU)),'r')}</div>`;
+    H+='<div class="rep-sub">Detalle por plataforma</div>'+repTabla(rs);
+    H+='<div class="rep-sub">Acciones prioritarias</div><ul class="acc">';
+    if(acc.length)acc.forEach(a=>H+=`<li class="${a.cls}">${a.txt}</li>`);
+    else H+='<li class="g">Todos los canales del país están en cumplimiento (o falta cargar la matriz).</li>';
+    H+='</ul>';
+    if(fort.length){H+='<div class="rep-sub">Fortalezas a sostener</div><ul class="acc">';
+      fort.forEach(a=>H+=`<li class="g">${a.txt}</li>`);H+='</ul>';}
+    H+=`<div class="rep-foot"><span>Masia Group · ${p}</span><span>Confidencial · uso interno</span></div></div>`;
+  });
+  document.getElementById('reporte').innerHTML=H;
+}
+function pdfPanel(){document.body.classList.remove('modo-reporte');window.print()}
+function pdfEjecutivo(){buildReporte();document.body.classList.add('modo-reporte');window.print()}
+window.onafterprint=()=>document.body.classList.remove('modo-reporte');
+
+// ===================== Capa Supabase (datos · login · roles) =====================
+let SB=null, ME=null, COBROWS=[], PUBROWS=[];
+function esAdmin(){return !!(ME&&ME.rol==='admin')}
+function supaConfigurada(){
+  return window.SUPA_URL&&window.SUPA_ANON&&!/TU-PROYECTO|TU-ANON/.test(String(window.SUPA_URL)+String(window.SUPA_ANON));
+}
+// DATA se reconstruye cruzando cobertura + matriz + publicaciones
+function rebuildDATA(){
+  const pm={};
+  PUBROWS.forEach(p=>pm[p.pais+'|'+p.empresa+'|'+p.canal]={skuPb:p.sku_pb||0,pub:p.pub||0});
+  DATA=COBROWS.map(c=>{
+    const a=MATRIZ_AGG[c.empresa]||{pub:0,sku:0};
+    const r=pm[c.pais+'|'+c.empresa+'|'+c.canal]||{skuPb:0,pub:0};
+    return {pais:c.pais,canal:c.canal,empresa:c.empresa,
+      smE:a.sku,smA:a.sku,skuPb:r.skuPb,pmE:a.pub,pmA:a.pub,pub:r.pub};
+  });
+}
+async function cargarTodo(){
+  const [mz,cob,pub]=await Promise.all([
+    SB.from('matriz').select('*'),
+    SB.from('cobertura').select('*'),
+    SB.from('publicaciones').select('*')
+  ]);
+  const err=mz.error||cob.error||pub.error;
+  if(err){alert('Error cargando datos: '+err.message);return}
+  MATRIZ_AGG={};(mz.data||[]).forEach(m=>MATRIZ_AGG[m.empresa]={pub:m.pub,sku:m.sku});
+  COBROWS=cob.data||[]; PUBROWS=pub.data||[];
+  rebuildDATA(); render();
+}
+async function guardarMatriz(filas){
+  if(!esAdmin()){alert('Solo el administrador puede cargar la matriz.');return}
+  try{
+    const {error}=await SB.from('matriz').upsert(filas,{onConflict:'empresa'});
+    if(error)throw error;
+    await cargarTodo();
+    const tp=filas.reduce((a,b)=>a+b.pub,0);
+    const det=filas.slice().sort((a,b)=>a.empresa.localeCompare(b.empresa))
+      .map(f=>`${f.empresa}: ${fmt(f.pub)} pub / ${fmt(f.sku)} SKU`).join('\n');
+    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}`);
+  }catch(e){alert('No se pudo guardar la matriz: '+(e.message||e));}
+}
+function gatearUI(){
+  const admin=esAdmin();
+  document.querySelectorAll('.solo-admin').forEach(el=>el.style.display=admin?'':'none');
+}
+async function cargarPerfil(){
+  const {data:{user}}=await SB.auth.getUser();
+  if(!user)return null;
+  const {data}=await SB.from('profiles').select('rol,paises').eq('id',user.id).maybeSingle();
+  return {id:user.id,email:user.email,rol:(data&&data.rol)||'user',paises:(data&&data.paises)||[]};
+}
+async function entrarApp(){
+  ME=await cargarPerfil();
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('btnLogout').style.display='';
+  const ses=document.getElementById('sesion');
+  if(ses)ses.innerHTML=`<b>${ME.email}</b> · ${esAdmin()?'Admin':'Usuario'}`;
+  gatearUI();
+  if(ME.paises&&ME.paises.length)FILT.pais=new Set(ME.paises); // filtro por defecto, no candado
+  await cargarTodo();
+}
+async function doLogin(){
+  const email=document.getElementById('liEmail').value.trim();
+  const pass=document.getElementById('liPass').value;
+  const msg=document.getElementById('liMsg');
+  if(!email||!pass){msg.textContent='Escribe correo y contraseña.';return}
+  msg.style.color='var(--gris)';msg.textContent='Entrando…';
+  const {error}=await SB.auth.signInWithPassword({email,password:pass});
+  if(error){msg.style.color='var(--rojo)';msg.textContent='No se pudo entrar: '+error.message;return}
+  msg.textContent='';
+  await entrarApp();
+}
+async function doLogout(){try{await SB.auth.signOut()}catch(e){}location.reload();}
+async function initApp(){
+  const ov=document.getElementById('loginOverlay');
+  if(!supaConfigurada()){
+    ov.style.display='flex';
+    document.getElementById('liForm').style.display='none';
+    const m=document.getElementById('liMsg');m.style.color='var(--rojo)';
+    m.innerHTML='⚠ Falta configurar <code>config.js</code> con la URL y la anon key de Supabase.';
+    return;
+  }
+  SB=supabase.createClient(window.SUPA_URL,window.SUPA_ANON);
+  const {data:{session}}=await SB.auth.getSession();
+  if(session)await entrarApp();
+  else ov.style.display='flex';
+}
+initApp();
+</script>
+</body>
+</html>
