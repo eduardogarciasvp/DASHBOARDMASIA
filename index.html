@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cumplimiento de Publicaciones · E-commerce Masia Group</title>
-<link rel="icon" type="image/png" href="https://cdn.shopify.com/s/files/1/0732/9867/3902/files/Diseno_sin_titulo_1.png?v=1763990106">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -251,7 +250,7 @@
   .acc{margin:5px 0 0;padding-left:0;list-style:none}
   .acc li{font-size:11px;padding:5px 0 5px 18px;position:relative;border-bottom:1px solid #F0F0F0}
   .acc li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:2px}
-  .acc li.r::before{background:var(--rojo)} .acc li.y::before{background:var(--amar)} .acc li.g::before{background:var(--verde)}
+  .acc li.r::before{background:var(--rojo)} .acc li.y::before{background:var(--amar)} .acc li.g::before{background:var(--verde)} .acc li.b::before{background:var(--azul)}
   .acc li b{color:var(--azul-tinta)}
   .rep-foot{margin-top:14px;border-top:2px solid var(--ambar);padding-top:6px;font-size:9px;color:var(--gris);display:flex;justify-content:space-between}
 
@@ -777,6 +776,46 @@ function skuDistintos(rows,skuCol,canal){
     set.add(v.toUpperCase());});
   return set.size;
 }
+// ---- Línea/familia de producto a partir del SKU (misma regla para matriz y publicaciones) ----
+const COL_TIT=['titulo','título','title','nombre','item title','nombre del producto'];
+function lineaSKU(sku){
+  let s=String(sku==null?'':sku).trim().toUpperCase();
+  if(!s)return 'OTROS';
+  const pref=s.includes('.')?s.split('.')[0]:null;      // MAS./KTC./HNK. ...
+  if(s.includes('.'))s=s.slice(s.indexOf('.')+1);
+  if(/^[KM][A-Z]{2}/.test(s))s=s.slice(1);              // letra de marca K/M si sigue familia de letras
+  const a=s.match(/^[A-Z]+/); if(a)return a[0];
+  const d=s.match(/^\d+/);
+  if(d&&s.length>d[0].length)return d[0];               // '01-0014' -> '01'
+  return pref||(d?d[0].slice(0,2):s.slice(0,2)||'OTROS'); // número puro: usa prefijo de marca (HNK)
+}
+// Resumen de un grupo país·empresa·canal con UNICIDAD garantizada:
+// pub = SKUs completos distintos (el mismo listing repetido no suma dos veces)
+// sku = SKUs físicos distintos (Amazon sin correlativo) · lineas = desglose por familia
+function resumenGrupo(rows,skuCol,titCol,canal){
+  const amazon=/amazon/i.test(canal||'');
+  if(!skuCol){
+    if(titCol){const t=new Set();let vacias=0;
+      rows.forEach(x=>{const v=String(x[titCol]==null?'':x[titCol]).trim().toLowerCase().replace(/\s+/g,' ');v?t.add(v):vacias++;});
+      const u=t.size+vacias;return {pub:u,sku:u,dups:rows.length-u,lineas:{}};}
+    return {pub:rows.length,sku:rows.length,dups:0,lineas:{}};
+  }
+  const full=new Set(),fis=new Set(),lin={};let vacias=0;
+  rows.forEach(x=>{
+    const f=String(x[skuCol]==null?'':x[skuCol]).trim().toUpperCase();
+    if(!f){vacias++;return}
+    const ph=amazon?f.replace(/-\d{3,4}$/,''):f;
+    if(!full.has(f)){
+      full.add(f);
+      const l=lineaSKU(ph);
+      (lin[l]=lin[l]||{pub:0,sku:new Set()}).pub++;
+      lin[l].sku.add(ph);
+    }
+    fis.add(ph);
+  });
+  const lineas={};Object.keys(lin).forEach(k=>lineas[k]={pub:lin[k].pub,sku:lin[k].sku.size});
+  return {pub:full.size+vacias,sku:fis.size+vacias,dups:rows.length-full.size-vacias,lineas};
+}
 function analizarPubFile(file){
   return new Promise(res=>{
     const r=new FileReader();
@@ -787,6 +826,7 @@ function analizarPubFile(file){
       if(!rows.length){res({grupos:[],error:'la hoja está vacía',filename:file.name});return}
       const keys=Object.keys(rows[0]);
       const cPais=findCol(keys,COL_PAIS), cEmp=findCol(keys,COL_EMP), cCan=findCol(keys,COL_CAN);
+      const titCol=findCol(keys,COL_TIT);
       let skuCol=keys.find(k=>SKU_CANDS.includes(k.toLowerCase().trim()))||keys.find(k=>k.toLowerCase().includes('sku'));
       if(cPais&&cEmp&&cCan){
         // ---- Consolidado: una fila por listing; agrupamos por país·empresa·canal ----
@@ -796,19 +836,17 @@ function analizarPubFile(file){
           const k=pais+'|'+empresa+'|'+canal;
           (g[k]=g[k]||{pais,empresa,canal,rows:[]}).rows.push(x);
         });
-        const grupos=Object.values(g).map(o=>({
-          pais:o.pais, empresa:o.empresa, canal:o.canal,
-          filas:o.rows.length,
-          skusUnicos: skuCol?skuDistintos(o.rows,skuCol,o.canal):o.rows.length,
-          skuCol: skuCol||null
-        }));
+        const grupos=Object.values(g).map(o=>{
+          const r2=resumenGrupo(o.rows,skuCol,titCol,o.canal);
+          return {pais:o.pais,empresa:o.empresa,canal:o.canal,
+            filas:r2.pub,skusUnicos:r2.sku,dups:r2.dups,lineas:r2.lineas,skuCol:skuCol||null};
+        });
         res({grupos,consolidado:true,filename:file.name});
       } else {
         // ---- Fallback: el archivo es una sola tienda (detección por nombre) ----
         const det=detectarPCE(file.name);
-        const filas=rows.length;
-        const skusUnicos=skuCol?skuDistintos(rows,skuCol,det.canal):filas;
-        res({grupos:[{...det,filas,skusUnicos,skuCol:skuCol||null}],consolidado:false,filename:file.name});
+        const r2=resumenGrupo(rows,skuCol,titCol,det.canal);
+        res({grupos:[{...det,filas:r2.pub,skusUnicos:r2.sku,dups:r2.dups,lineas:r2.lineas,skuCol:skuCol||null}],consolidado:false,filename:file.name});
       }
     }catch(err){res({grupos:[],error:err.message,filename:file.name})}};
     r.readAsArrayBuffer(file);
@@ -858,7 +896,7 @@ function abrirModalPub(){
   PEND.forEach((p,i)=>{
     const det=(p.pais&&p.canal&&p.empresa);
     const cnt=p.error?`<span class="warn">No se pudo leer: ${p.error}</span>`
-      :`<b>${fmt(p.filas)}</b> publicaciones · <b>${fmt(p.skusUnicos)}</b> SKUs únicos ${p.skuCol?'(col. "'+p.skuCol+'")':'(sin columna SKU — se usa nº de filas)'}`;
+      :`<b>${fmt(p.filas)}</b> publicaciones únicas · <b>${fmt(p.skusUnicos)}</b> SKUs únicos${p.dups?` · <span class="warn">${fmt(p.dups)} duplicados descartados</span>`:''} ${p.skuCol?'(col. "'+p.skuCol+'")':'(sin columna SKU — se usa nº de filas)'}`;
     const cab=p.consolidado?`<b>${p.empresa||'?'} · ${p.canal||'?'} · ${p.pais||'?'}</b>`:p.filename;
     h+=`<div class="pubrow">
       <div class="pn">📄 ${cab} ${det?'✅':'⚠️'}</div>
@@ -882,11 +920,11 @@ async function aplicarPublicaciones(){
   const filas=[];let skip=0;
   PEND.forEach(p=>{
     if(!p.pais||!p.canal||!p.empresa||p.error){skip++;return}
-    filas.push({pais:p.pais,empresa:p.empresa,canal:p.canal,sku_pb:p.skusUnicos,pub:p.filas});
+    filas.push({pais:p.pais,empresa:p.empresa,canal:p.canal,sku_pb:p.skusUnicos,pub:p.filas,lineas:p.lineas||{}});
   });
   if(!filas.length){alert('No hay archivos asignados para cargar.'+(skip?` (${skip} omitidos)`:''));return}
   try{
-    const {error}=await SB.from('publicaciones').upsert(filas,{onConflict:'pais,empresa,canal'});
+    const error=await upsertConLineas('publicaciones',filas,'pais,empresa,canal');
     if(error)throw error;
     cerrarModal();
     await cargarTodo();
@@ -926,13 +964,22 @@ function cargarMatriz(e){
       const emp=normEmp(rawE);
       const pre=String(row[iPre]==null?'':row[iPre]).trim().toUpperCase();
       if(pre!=='SI')continue; // sin precio = no publicable, no cuenta
-      if(!agg[emp])agg[emp]={pub:0,sku:new Set()};
+      if(!agg[emp])agg[emp]={pub:0,sku:new Set(),lin:{}};
       agg[emp].pub++;
       const sc=iCorto>=0?row[iCorto]:null;
-      if(sc!=null&&String(sc).trim()!=='')agg[emp].sku.add(String(sc).trim().toUpperCase());
+      const scv=sc!=null?String(sc).trim().toUpperCase():'';
+      if(scv){
+        agg[emp].sku.add(scv);
+        const l=lineaSKU(scv);
+        (agg[emp].lin[l]=agg[emp].lin[l]||{pub:0,sku:new Set()}).pub++;
+        agg[emp].lin[l].sku.add(scv);
+      }
     }
     if(!Object.keys(agg).length){alert('No se contó ninguna fila con precio. Revisa la columna "Tiene Precio".');return}
-    const filas=Object.keys(agg).map(k=>({empresa:k,pub:agg[k].pub,sku:agg[k].sku.size}));
+    const filas=Object.keys(agg).map(k=>{
+      const lineas={};Object.keys(agg[k].lin).forEach(l=>lineas[l]={pub:agg[k].lin[l].pub,sku:agg[k].lin[l].sku.size});
+      return {empresa:k,pub:agg[k].pub,sku:agg[k].sku.size,lineas};
+    });
     guardarMatriz(filas); // upsert a Supabase + recarga + aviso
   }catch(err){alert('No se pudo leer la matriz: '+err.message)}};
   r.readAsArrayBuffer(file);
@@ -1038,18 +1085,53 @@ function repTabla(rs){
   return h+'</tbody></table>';
 }
 function clsN(p){return p==null?'n':cls(p)}
+// ===== Reporte ejecutivo: objetivos fechados (revisiones de los miércoles) =====
+function proxMier(n){const d=new Date();let add=(3-d.getDay()+7)%7;if(add===0)add=7;
+  const f=new Date(d);f.setDate(d.getDate()+add+7*((n||1)-1));return f;}
+function fFec(d){return d.toLocaleDateString('es',{weekday:'short',day:'2-digit',month:'short'});}
+// Metas alcanzables por tienda a partir de la brecha de publicaciones:
+//  ≤200: cerrar todo esta semana · ≤1.000: quincenal (50%/100%) · mayor: ritmo semanal del 10% (mín. 100)
+function objetivoTienda(r){
+  const m=pubMz(r),a=r.pub,b=Math.max(0,m-a);
+  if(!m)return {tipo:'sinmz'};
+  if(b===0)return {tipo:'ok'};
+  const w1=proxMier(1),w2=proxMier(2);
+  if(b<=200)return {tipo:'sem',b,paso:b,metas:[{f:w1,v:m}]};
+  if(b<=1000)return {tipo:'quin',b,paso:Math.ceil(b/2),metas:[{f:w1,v:a+Math.ceil(b/2)},{f:w2,v:m}]};
+  const paso=Math.max(100,Math.round(b*0.10/10)*10);
+  return {tipo:'cont',b,paso,metas:[{f:w1,v:a+paso},{f:w2,v:Math.min(m,a+2*paso)}]};
+}
+function objTxt(r,o){
+  const metas=o.metas.map(x=>`<b>${fmt(x.v)}</b> para ${fFec(x.f)}`).join(' · ');
+  const cola=o.tipo==='cont'?` (ritmo ${fmt(o.paso)}/sem hasta cerrar)`:(o.tipo==='quin'?' (quincenal)':'');
+  return `hoy <b>${fmt(r.pub)}</b> de ${fmt(pubMz(r))} publicaciones → ${metas}${cola}`;
+}
+// Líneas de producto con mayor brecha para una tienda (matriz vs publicado)
+function lineasCriticas(r,topN){
+  const ml=(MATRIZ_AGG[r.empresa]||{}).lineas||{};
+  if(!Object.keys(ml).length)return {falta:'matriz',items:[]};
+  const pr=PUBROWS.find(p=>p.pais===r.pais&&p.empresa===r.empresa&&p.canal===r.canal);
+  const pl=(pr&&pr.lineas)||{};
+  const sinDesglose=pr&&pr.pub>0&&!Object.keys(pl).length;
+  const items=Object.keys(ml).map(l=>({l,obj:ml[l].pub,hoy:(pl[l]&&pl[l].pub)||0}))
+    .map(x=>({...x,gap:x.obj-x.hoy})).filter(x=>x.gap>0)
+    .sort((x,y)=>y.gap-x.gap).slice(0,topN||3);
+  return {falta:sinDesglose?'pub':null,items};
+}
 function buildReporte(){
   const hoy=new Date().toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'});
+  const w1=proxMier(1),w2=proxMier(2);
   const all=DATA,tg=totales(all);let H='';
+  // ---------- Página 1 · Resumen general ----------
   H+=`<div class="rep-page"><div class="rep-head">
       <div class="rt"><small>Masia Group · E-commerce</small>Resumen general de cumplimiento</div>
-      <div class="rd">${hoy}</div></div>`;
+      <div class="rd">${hoy}<br>Próx. revisión: ${fFec(w1)}</div></div>`;
   H+=`<div class="rep-kpis">
       ${repK('Cumpl. SKU',tg.pSKU==null?'—':tg.pSKU+'%',clsN(tg.pSKU))}
       ${repK('Cumpl. Pub.',tg.pPUB==null?'—':tg.pPUB+'%',clsN(tg.pPUB))}
       ${repK('SKUs únicos',fmt(tg.skuU),'b')}
       ${repK('Publicaciones',fmt(tg.pub),'b')}
-      ${repK('SKUs faltantes',fmt(Math.max(0,tg.skuMzU-tg.skuU)),'r')}</div>`;
+      ${repK('Pub. faltantes',fmt(Math.max(0,tg.pubM-tg.pub)),'r')}</div>`;
   H+='<div class="rep-sub">Cumplimiento por país</div>';
   H+='<table class="rep"><thead><tr><th class="l">País</th><th>SKU únicos</th><th>SKU matriz</th><th>%SKU</th><th>Publicaciones</th><th>Pub matriz</th><th>%Pub</th><th>Plataformas</th></tr></thead><tbody>';
   ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).map(p=>({p,t:totales(all.filter(r=>r.pais===p)),n:all.filter(r=>r.pais===p).length}))
@@ -1060,29 +1142,59 @@ function buildReporte(){
   H+=`<tr style="font-weight:700;border-top:2px solid var(--azul)"><td class="l">TOTAL RED</td>
       <td>${fmt(tg.skuU)}</td><td>${fmt(tg.skuMzU)}</td><td>${pp(tg.pSKU)}</td>
       <td>${fmt(tg.pub)}</td><td>${fmt(tg.pubM)}</td><td>${pp(tg.pPUB)}</td><td>${all.length}</td></tr></tbody></table>`;
-  const topGap=all.map(r=>({r,pS:pctSKU(r),falt:Math.max(0,skuMz(r)-r.skuPb)})).filter(o=>o.pS!=null&&o.pS<90).sort((a,b)=>b.falt-a.falt).slice(0,6);
-  H+='<div class="rep-sub">Acciones prioritarias de la red</div><ul class="acc">';
-  if(topGap.length)topGap.forEach(o=>{H+=`<li class="${o.pS<75?'r':'y'}"><b>${o.r.pais} · ${o.r.empresa} · ${o.r.canal}</b> — publicar ${fmt(o.falt)} SKUs (hoy ${o.pS}%).</li>`});
-  else H+='<li class="g">Sin brechas relevantes o falta cargar la matriz para medir cumplimiento.</li>';
+  // Objetivos de la red: tiendas con mayor brecha, con meta y fecha
+  const objs=all.map(r=>({r,o:objetivoTienda(r)})).filter(x=>x.o.metas&&x.o.b>0).sort((a,b)=>b.o.b-a.o.b);
+  const metaRed=objs.reduce((s,x)=>s+(x.o.metas[0].v-x.r.pub),0);
+  H+=`<div class="rep-sub">Objetivos de la red · próxima revisión ${fFec(w1)}</div><ul class="acc">`;
+  if(objs.length){
+    H+=`<li class="b"><b>Meta global de la semana:</b> publicar <b>+${fmt(metaRed)}</b> publicaciones netas en la red (de ${fmt(tg.pub)} a ${fmt(tg.pub+metaRed)}) antes del ${fFec(w1)}.</li>`;
+    objs.slice(0,8).forEach(x=>{
+      H+=`<li class="${x.o.tipo==='cont'?'r':'y'}"><b>${x.r.pais} · ${x.r.empresa} · ${x.r.canal}</b> — ${objTxt(x.r,x.o)}</li>`;});
+    if(objs.length>8)H+=`<li class="y">+${objs.length-8} tiendas más con brecha — detalle en las páginas por país.</li>`;
+  } else H+='<li class="g">Sin brechas de publicaciones o falta cargar la matriz para medir.</li>';
   H+=`</ul><div class="rep-foot"><span>Masia Group · Gestión E-commerce</span><span>Confidencial · uso interno</span></div></div>`;
+  // ---------- Página por país ----------
   ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).forEach(p=>{
-    const rs=all.filter(r=>r.pais===p);const t=totales(rs);const {acc,fort}=accionesPais(p);
+    const rs=all.filter(r=>r.pais===p);const t=totales(rs);
     H+=`<div class="rep-page"><div class="rep-head">
         <div class="rt"><small>Masia Group · E-commerce</small>${FLAGS[p]||''} ${p}</div>
-        <div class="rd">${hoy}</div></div>`;
+        <div class="rd">${hoy}<br>Próx. revisión: ${fFec(w1)}</div></div>`;
     H+=`<div class="rep-kpis">
         ${repK('Cumpl. SKU',t.pSKU==null?'—':t.pSKU+'%',clsN(t.pSKU))}
         ${repK('Cumpl. Pub.',t.pPUB==null?'—':t.pPUB+'%',clsN(t.pPUB))}
         ${repK('SKUs únicos',fmt(t.skuU)+'/'+fmt(t.skuMzU),'b')}
-        ${repK('Publicaciones',fmt(t.pub),'b')}
-        ${repK('SKUs faltantes',fmt(Math.max(0,t.skuMzU-t.skuU)),'r')}</div>`;
+        ${repK('Publicaciones',fmt(t.pub)+'/'+fmt(t.pubM),'b')}
+        ${repK('Pub. faltantes',fmt(Math.max(0,t.pubM-t.pub)),'r')}</div>`;
     H+='<div class="rep-sub">Detalle por plataforma</div>'+repTabla(rs);
-    H+='<div class="rep-sub">Acciones prioritarias</div><ul class="acc">';
-    if(acc.length)acc.forEach(a=>H+=`<li class="${a.cls}">${a.txt}</li>`);
-    else H+='<li class="g">Todos los canales del país están en cumplimiento (o falta cargar la matriz).</li>';
+    // Objetivos por tienda del país
+    const po=rs.map(r=>({r,o:objetivoTienda(r)}));
+    const conMeta=po.filter(x=>x.o.metas&&x.o.b>0).sort((a,b)=>b.o.b-a.o.b);
+    H+=`<div class="rep-sub">Objetivos · revisión ${fFec(w1)}${conMeta.some(x=>x.o.metas.length>1)?' y '+fFec(w2):''}</div><ul class="acc">`;
+    if(conMeta.length)conMeta.forEach(x=>{
+      H+=`<li class="${x.o.tipo==='cont'?'r':'y'}"><b>${x.r.empresa} · ${x.r.canal}</b> — ${objTxt(x.r,x.o)}</li>`;});
+    else H+='<li class="g">Todos los canales del país cumplen su matriz (o falta cargar la matriz).</li>';
     H+='</ul>';
+    // Líneas de producto a priorizar (donde menos se ha publicado)
+    let bloq='';let notas=new Set();
+    conMeta.forEach(x=>{
+      const lc=lineasCriticas(x.r,3);
+      if(lc.falta==='pub')notas.add(`${x.r.empresa} · ${x.r.canal}: vuelve a subir sus publicaciones para ver el desglose por línea.`);
+      if(!lc.items.length)return;
+      const det=lc.items.map(i=>{
+        const metaL=Math.min(i.gap,Math.max(5,Math.round(x.o.paso*i.gap/x.o.b)));
+        return `<b>${i.l}</b> (hoy ${fmt(i.hoy)}/${fmt(i.obj)} · +${fmt(metaL)} esta semana)`;
+      }).join(' · ');
+      bloq+=`<li class="y"><b>${x.r.empresa} · ${x.r.canal}</b> — priorizar líneas: ${det}.</li>`;
+    });
+    if(bloq||notas.size){
+      H+='<div class="rep-sub">Líneas de producto a priorizar</div><ul class="acc">'+bloq;
+      notas.forEach(n=>H+=`<li class="b">${n}</li>`);
+      H+='</ul>';
+    }
+    // Fortalezas
+    const fort=rs.filter(r=>pctPUB(r)!=null&&pctPUB(r)>=90);
     if(fort.length){H+='<div class="rep-sub">Fortalezas a sostener</div><ul class="acc">';
-      fort.forEach(a=>H+=`<li class="g">${a.txt}</li>`);H+='</ul>';}
+      fort.forEach(r=>H+=`<li class="g"><b>${r.empresa} · ${r.canal}</b> — ${pctPUB(r)}% de cumplimiento (${fmt(r.pub)}/${fmt(pubMz(r))}). Mantener y vigilar bajas.</li>`);H+='</ul>';}
     H+=`<div class="rep-foot"><span>Masia Group · ${p}</span><span>Confidencial · uso interno</span></div></div>`;
   });
   document.getElementById('reporte').innerHTML=H;
@@ -1120,14 +1232,24 @@ async function cargarTodo(){
   ]);
   const err=mz.error||cob.error||pub.error;
   if(err){alert('Error cargando datos: '+err.message);return}
-  MATRIZ_AGG={};(mz.data||[]).forEach(m=>MATRIZ_AGG[m.empresa]={pub:m.pub,sku:m.sku});
+  MATRIZ_AGG={};(mz.data||[]).forEach(m=>MATRIZ_AGG[m.empresa]={pub:m.pub,sku:m.sku,lineas:m.lineas||{}});
   COBROWS=cob.data||[]; PUBROWS=pub.data||[];
   rebuildDATA(); render();
+}
+// Upsert tolerante: si la columna 'lineas' aún no existe en la base, guarda sin ella y avisa.
+async function upsertConLineas(tabla,filas,conflict){
+  let {error}=await SB.from(tabla).upsert(filas,{onConflict:conflict});
+  if(error&&/lineas/i.test(error.message||'')){
+    const sin=filas.map(f=>{const {lineas,...r}=f;return r});
+    ({error}=await SB.from(tabla).upsert(sin,{onConflict:conflict}));
+    if(!error)alert('⚠ Guardado sin el análisis por línea: falta correr el ALTER TABLE de "lineas" en Supabase (2 líneas de SQL).');
+  }
+  return error;
 }
 async function guardarMatriz(filas){
   if(!esAdmin()){alert('Solo el administrador puede cargar la matriz.');return}
   try{
-    const {error}=await SB.from('matriz').upsert(filas,{onConflict:'empresa'});
+    const error=await upsertConLineas('matriz',filas,'empresa');
     if(error)throw error;
     await cargarTodo();
     const tp=filas.reduce((a,b)=>a+b.pub,0);
