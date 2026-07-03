@@ -305,6 +305,7 @@
     <button class="tab on" id="tab1" onclick="setPage(1)">Detalle por plataforma</button>
     <button class="tab" id="tab2" onclick="setPage(2)">Resumen general · Matriz</button>
     <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
+    <button class="tab" id="tab4" onclick="setPage(4)">Validación · Títulos</button>
   </div>
 
   <!-- ===================== PÁGINA 1 ===================== -->
@@ -398,6 +399,24 @@
         <b>Cómo se llenan los números:</b> cada fila externa (Amazon / eBay / Mercado Libre) toma el <i>deber ser</i> de <b>su empresa</b> en la matriz — el mismo denominador en todos los canales externos de esa empresa.
         La <b>Masia Shop</b> agrégala como una fila por empresa: el total del país las suma (una sola tienda para todas las empresas).
         El lado <i>real</i> (lo efectivamente publicado) se carga con <b>📦 Cargar publicaciones</b>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PÁGINA 4 · VALIDACIÓN POR TÍTULO ===================== -->
+  <div class="page" id="page4">
+    <div class="sec" style="margin-top:18px">
+      <div class="sec-h">
+        <h2>Validación por título · Publicado vs Matriz</h2>
+        <span class="hint"><b>Cumplen</b> = título publicado existe en la matriz de su empresa · <b>Fuera</b> = publicado pero no está en la matriz · <b>Faltantes</b> = en matriz con precio, sin publicar en esa tienda.</span>
+      </div>
+      <div id="valStatus" class="covstat warn"></div>
+      <div style="margin-bottom:12px"><button class="btn-cov ghost" onclick="cargarValidacion(true)">↻ Actualizar</button></div>
+      <div class="tbl-wrap"><div id="valTabla"></div></div>
+      <div class="note">
+        <b>Cómo funciona:</b> la comparación es exacta por título, ignorando mayúsculas y espacios repetidos (y unificando las variantes de Sullivan/Palatek). Acepta <b>todos los idiomas</b> que traiga la matriz (columnas u hojas Titulo EN / ES / PT): los faltantes se cuentan por <b>producto</b>, no por idioma.
+        Un título como <i>"1613-6105-00 Filtro de Aceite Atlas Copco"</i> <b>no cumple</b> si la matriz dice <i>"…Compatible con Atlas Copco"</i> — aparecerá en <b>Fuera de matriz</b> y su versión correcta en <b>Faltantes</b>.
+        El botón <b>⬇ Excel</b> descarga ambas listas con Título, SKU y Tiene Precio.
       </div>
     </div>
   </div>
@@ -733,10 +752,12 @@ function upd(idx,campo,el){
 function setMetrica(m){METRICA=m;
   document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
 function setPage(n){PAGE=n;
-  for(let i=1;i<=3;i++){
+  for(let i=1;i<=4;i++){
     document.getElementById('page'+i).classList.toggle('on',n===i);
     document.getElementById('tab'+i).classList.toggle('on',n===i);
-  }}
+  }
+  if(n===4&&!VALID_CACHE&&SB)cargarValidacion();
+}
 
 // ===== Carga de PUBLICACIONES (real) =====
 const SKU_CANDS=['sku','seller-sku','seller_sku','custom label (sku)','custom label','codigo','código',
@@ -765,6 +786,30 @@ function normEmpresa(v){let s=String(v==null?'':v).trim();
   if(s.toUpperCase()==='XSTORE')return 'Xstore';
   if(/^masia\s+compressor/i.test(s))return 'Masia Compressors';
   return s;
+}
+// Título normalizado para comparar contra la matriz:
+// minúsculas + espacios colapsados + variantes Sullivan/Palatek unificadas
+function normTitulo(t){
+  return String(t==null?'':t).toLowerCase()
+    .replace(/sullivan[\s\/\-]+palatek/g,'sullivan palatek')
+    .replace(/\s+/g,' ').trim();
+}
+// Indicador de progreso flotante (para cargas largas)
+function prog(msg){
+  let el=document.getElementById('progreso');
+  if(msg===null){if(el)el.remove();return}
+  if(!el){el=document.createElement('div');el.id='progreso';
+    el.style.cssText='position:fixed;bottom:18px;right:18px;z-index:300;background:#122A4C;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.3)';
+    document.body.appendChild(el);}
+  el.textContent=msg;
+}
+// Sube filas a una tabla en lotes (evita límites de payload)
+async function subirEnLotes(tabla,filas,lote,label){
+  for(let i=0;i<filas.length;i+=lote){
+    const {error}=await SB.from(tabla).upsert(filas.slice(i,i+lote),{ignoreDuplicates:true});
+    if(error)throw error;
+    prog(`${label}: ${Math.min(filas.length,i+lote).toLocaleString()} / ${filas.length.toLocaleString()}…`);
+  }
 }
 // SKUs distintos de un grupo. En Amazon se quita el correlativo OEM final (-000, -016...)
 // para no contar como SKU distinto cada variante OEM del mismo producto físico.
@@ -800,8 +845,11 @@ function resumenGrupo(rows,skuCol,titCol,canal){
       const u=t.size+vacias;return {pub:u,sku:u,dups:rows.length-u,lineas:{}};}
     return {pub:rows.length,sku:rows.length,dups:0,lineas:{}};
   }
-  const full=new Set(),fis=new Set(),lin={};let vacias=0;
+  const full=new Set(),fis=new Set(),lin={};let vacias=0;const tmap={};
   rows.forEach(x=>{
+    if(titCol){const tt=String(x[titCol]==null?'':x[titCol]).trim();
+      if(tt){const n=normTitulo(tt);
+        if(!tmap[n])tmap[n]={titulo_norm:n,titulo:tt,sku:skuCol?String(x[skuCol]==null?'':x[skuCol]).trim():null};}}
     const f=String(x[skuCol]==null?'':x[skuCol]).trim().toUpperCase();
     if(!f){vacias++;return}
     const ph=amazon?f.replace(/-\d{3,4}$/,''):f;
@@ -814,7 +862,7 @@ function resumenGrupo(rows,skuCol,titCol,canal){
     fis.add(ph);
   });
   const lineas={};Object.keys(lin).forEach(k=>lineas[k]={pub:lin[k].pub,sku:lin[k].sku.size});
-  return {pub:full.size+vacias,sku:fis.size+vacias,dups:rows.length-full.size-vacias,lineas};
+  return {pub:full.size+vacias,sku:fis.size+vacias,dups:rows.length-full.size-vacias,lineas,tits:Object.values(tmap)};
 }
 function analizarPubFile(file){
   return new Promise(res=>{
@@ -839,14 +887,14 @@ function analizarPubFile(file){
         const grupos=Object.values(g).map(o=>{
           const r2=resumenGrupo(o.rows,skuCol,titCol,o.canal);
           return {pais:o.pais,empresa:o.empresa,canal:o.canal,
-            filas:r2.pub,skusUnicos:r2.sku,dups:r2.dups,lineas:r2.lineas,skuCol:skuCol||null};
+            filas:r2.pub,skusUnicos:r2.sku,dups:r2.dups,lineas:r2.lineas,tits:r2.tits,skuCol:skuCol||null};
         });
         res({grupos,consolidado:true,filename:file.name});
       } else {
         // ---- Fallback: el archivo es una sola tienda (detección por nombre) ----
         const det=detectarPCE(file.name);
         const r2=resumenGrupo(rows,skuCol,titCol,det.canal);
-        res({grupos:[{...det,filas:r2.pub,skusUnicos:r2.sku,dups:r2.dups,lineas:r2.lineas,skuCol:skuCol||null}],consolidado:false,filename:file.name});
+        res({grupos:[{...det,filas:r2.pub,skusUnicos:r2.sku,dups:r2.dups,lineas:r2.lineas,tits:r2.tits,skuCol:skuCol||null}],consolidado:false,filename:file.name});
       }
     }catch(err){res({grupos:[],error:err.message,filename:file.name})}};
     r.readAsArrayBuffer(file);
@@ -917,19 +965,41 @@ function setPend(i,campo,val){PEND[i][campo]=val;
 }
 function cerrarModal(){document.getElementById('modalPub').style.display='none'}
 async function aplicarPublicaciones(){
-  const filas=[];let skip=0;
+  const filas=[],grupos=[];let skip=0;
   PEND.forEach(p=>{
     if(!p.pais||!p.canal||!p.empresa||p.error){skip++;return}
     filas.push({pais:p.pais,empresa:p.empresa,canal:p.canal,sku_pb:p.skusUnicos,pub:p.filas,lineas:p.lineas||{}});
+    grupos.push(p);
   });
   if(!filas.length){alert('No hay archivos asignados para cargar.'+(skip?` (${skip} omitidos)`:''));return}
   try{
     const error=await upsertConLineas('publicaciones',filas,'pais,empresa,canal');
     if(error)throw error;
+    // Títulos publicados (tabla pub_titulos): reemplaza por tienda y sube en lotes
+    let msgTit='';
+    try{
+      let tot=0;
+      for(const p of grupos){
+        if(!p.tits||!p.tits.length)continue;
+        prog(`Títulos ${p.empresa} · ${p.canal}…`);
+        const del=await SB.from('pub_titulos').delete().match({pais:p.pais,empresa:p.empresa,canal:p.canal});
+        if(del.error)throw del.error;
+        const rows=p.tits.map(t=>({pais:p.pais,empresa:p.empresa,canal:p.canal,...t}));
+        await subirEnLotes('pub_titulos',rows,500,`Títulos ${p.canal}`);
+        tot+=rows.length;
+      }
+      VALID_CACHE=null;
+      if(tot)msgTit=`\n${fmt(tot)} títulos guardados — revisa la pestaña Validación · Títulos.`;
+      else msgTit='\n(Sin columna de título en el archivo: la validación por título no se actualizó.)';
+    }catch(e2){
+      msgTit=/does not exist|schema cache/i.test(e2.message||'')
+        ?'\n⚠ Títulos NO guardados: falta correr validacion_titulos.sql en Supabase.'
+        :'\n⚠ Títulos NO guardados: '+(e2.message||e2);
+    }finally{prog(null);}
     cerrarModal();
     await cargarTodo();
-    alert(`✓ ${filas.length} tienda(s) actualizada(s).`+(skip?` ${skip} sin asignar se omitieron.`:''));
-  }catch(e){alert('No se pudo guardar: '+(e.message||e));}
+    alert(`✓ ${filas.length} tienda(s) actualizada(s).`+(skip?` ${skip} sin asignar se omitieron.`:'')+msgTit);
+  }catch(e){prog(null);alert('No se pudo guardar: '+(e.message||e));}
 }
 
 // ===== Carga de MATRIZ (deber ser) — nivel SKU, se agrega por empresa =====
@@ -945,43 +1015,65 @@ function cargarMatriz(e){
   const r=new FileReader();
   r.onload=ev=>{try{
     const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-    const ws=wb.Sheets['EN']||wb.Sheets[wb.SheetNames[0]];
-    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-    if(!aoa.length){alert('La hoja está vacía.');return}
-    // localizar la fila de encabezado (puede estar en la fila 1 o 2)
-    let hr=aoa.findIndex(row=>row&&row.some(c=>String(c).trim()==='Empresa')
-      &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio')));
-    if(hr<0)hr=0;
-    const H=aoa[hr].map(c=>String(c==null?'':c).trim());
-    const iEmp=H.indexOf('Empresa');
-    const iPre=H.findIndex(h=>h.toLowerCase().startsWith('tiene precio'));
-    let iCorto=H.indexOf('SKU Corto');if(iCorto<0)iCorto=H.findIndex(h=>h.toLowerCase().includes('sku corto'));
-    if(iEmp<0||iPre<0){alert('No encontré las columnas "Empresa" y "Tiene Precio" en la matriz.');return}
-    const agg={};
-    for(let i=hr+1;i<aoa.length;i++){
-      const row=aoa[i];if(!row)continue;
-      const rawE=row[iEmp];if(rawE==null||String(rawE).trim()==='')continue;
-      const emp=normEmp(rawE);
-      const pre=String(row[iPre]==null?'':row[iPre]).trim().toUpperCase();
-      if(pre!=='SI')continue; // sin precio = no publicable, no cuenta
-      if(!agg[emp])agg[emp]={pub:0,sku:new Set(),lin:{}};
-      agg[emp].pub++;
-      const sc=iCorto>=0?row[iCorto]:null;
-      const scv=sc!=null?String(sc).trim().toUpperCase():'';
-      if(scv){
-        agg[emp].sku.add(scv);
-        const l=lineaSKU(scv);
-        (agg[emp].lin[l]=agg[emp].lin[l]||{pub:0,sku:new Set()}).pub++;
-        agg[emp].lin[l].sku.add(scv);
+    // Hojas válidas: las que tienen "Empresa" + "Tiene Precio" (EN, ES, PT...)
+    const hojas=[];
+    wb.SheetNames.forEach(sn=>{
+      const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null});
+      if(!aoa.length)return;
+      const hr=aoa.findIndex(row=>row&&row.some(c=>String(c).trim()==='Empresa')
+        &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio')));
+      if(hr<0)return;
+      const H=aoa[hr].map(c=>String(c==null?'':c).trim());
+      hojas.push({sn,aoa,hr,
+        iEmp:H.indexOf('Empresa'),
+        iPre:H.findIndex(x=>x.toLowerCase().startsWith('tiene precio')),
+        iCorto:(H.indexOf('SKU Corto')>=0?H.indexOf('SKU Corto'):H.findIndex(x=>x.toLowerCase().includes('sku corto'))),
+        iSkuC:H.findIndex(x=>x.toLowerCase().includes('sku completo')),
+        iTits:H.map((x,ix)=>/^t[ií]tulo/.test(x.toLowerCase())?ix:-1).filter(ix=>ix>=0)});
+    });
+    if(!hojas.length){alert('No encontré ninguna hoja con las columnas "Empresa" y "Tiene Precio".');return}
+    const ppal=hojas.find(x=>x.sn==='EN')||hojas[0];
+    const agg={},tmap={};
+    hojas.forEach(hj=>{
+      const esPpal=hj===ppal;
+      for(let i=hj.hr+1;i<hj.aoa.length;i++){
+        const row=hj.aoa[i];if(!row)continue;
+        const rawE=row[hj.iEmp];if(rawE==null||String(rawE).trim()==='')continue;
+        const emp=normEmp(rawE);
+        const pre=String(row[hj.iPre]==null?'':row[hj.iPre]).trim().toUpperCase();
+        // Títulos para validación: TODAS las columnas "Titulo *" de TODAS las hojas (idiomas).
+        // "fila" = SKU Completo: identifica el producto para que los faltantes se cuenten
+        // por producto y no por idioma.
+        const filaId=(hj.iSkuC>=0&&row[hj.iSkuC]!=null?String(row[hj.iSkuC]).trim():'')
+          ||(hj.iCorto>=0&&row[hj.iCorto]!=null?String(row[hj.iCorto]).trim():'');
+        hj.iTits.forEach(it=>{
+          const tt=row[it]!=null?String(row[it]).trim():'';if(!tt)return;
+          const n=normTitulo(tt),k=emp+'\u0001'+n;
+          if(!tmap[k])tmap[k]={empresa:emp,titulo_norm:n,titulo:tt,
+            sku:filaId||null,tiene_precio:pre==='SI'?'SI':'NO',fila:filaId||n};
+          else if(pre==='SI')tmap[k].tiene_precio='SI';
+        });
+        // Denominadores: SOLO hoja principal (EN) y solo filas con precio
+        if(!esPpal||pre!=='SI')continue;
+        if(!agg[emp])agg[emp]={pub:0,sku:new Set(),lin:{}};
+        agg[emp].pub++;
+        const sc=hj.iCorto>=0?row[hj.iCorto]:null;
+        const scv=sc!=null?String(sc).trim().toUpperCase():'';
+        if(scv){
+          agg[emp].sku.add(scv);
+          const l=lineaSKU(scv);
+          (agg[emp].lin[l]=agg[emp].lin[l]||{pub:0,sku:new Set()}).pub++;
+          agg[emp].lin[l].sku.add(scv);
+        }
       }
-    }
+    });
     if(!Object.keys(agg).length){alert('No se contó ninguna fila con precio. Revisa la columna "Tiene Precio".');return}
     const filas=Object.keys(agg).map(k=>{
       const lineas={};Object.keys(agg[k].lin).forEach(l=>lineas[l]={pub:agg[k].lin[l].pub,sku:agg[k].lin[l].sku.size});
       return {empresa:k,pub:agg[k].pub,sku:agg[k].sku.size,lineas};
     });
-    guardarMatriz(filas); // upsert a Supabase + recarga + aviso
-  }catch(err){alert('No se pudo leer la matriz: '+err.message)}};
+    guardarMatriz(filas,Object.values(tmap)); // conteos + títulos multi-idioma
+  }catch(err){prog(null);alert('No se pudo leer la matriz: '+err.message)}};
   r.readAsArrayBuffer(file);
 }
 
@@ -1204,7 +1296,59 @@ function pdfEjecutivo(){buildReporte();document.body.classList.add('modo-reporte
 window.onafterprint=()=>document.body.classList.remove('modo-reporte');
 
 // ===================== Capa Supabase (datos · login · roles) =====================
-let SB=null, ME=null, COBROWS=[], PUBROWS=[];
+let SB=null, ME=null, COBROWS=[], PUBROWS=[], VALID_CACHE=null;
+
+// ===== Pestaña Validación por título =====
+async function cargarValidacion(force){
+  if(force)VALID_CACHE=null;
+  const st=document.getElementById('valStatus'),ct=document.getElementById('valTabla');
+  st.className='covstat warn';st.textContent='Consultando validación por título…';ct.innerHTML='';
+  const {data,error}=await SB.rpc('validar_resumen');
+  if(error){
+    st.innerHTML=/does not exist|schema cache|function/i.test(error.message||'')
+      ?'⚠ Falta correr <b>validacion_titulos.sql</b> en Supabase (SQL Editor) para habilitar esta pestaña.'
+      :'Error: '+error.message;
+    return;
+  }
+  VALID_CACHE=data||[];
+  if(!VALID_CACHE.length){
+    st.innerHTML='Sin datos de títulos aún. El admin debe <b>recargar la matriz</b> y el equipo <b>resubir las publicaciones</b> (el Excel debe traer la columna de título).';
+    return;
+  }
+  const tp=VALID_CACHE.reduce((s,r)=>s+ +r.publicadas,0),tc=VALID_CACHE.reduce((s,r)=>s+ +r.cumplen,0),tf=VALID_CACHE.reduce((s,r)=>s+ +r.fuera,0);
+  st.className='covstat ok';
+  st.innerHTML=`✓ ${fmt(tp)} títulos publicados en la red — <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de matriz.`;
+  let h='<table class="mat" style="min-width:820px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Publicadas</th><th>Cumplen</th><th>% Cumpl.</th><th>Fuera de matriz</th><th>Faltantes por publicar</th><th>Detalle</th></tr></thead><tbody>';
+  let pais0=null;
+  VALID_CACHE.forEach((r,i)=>{
+    if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="9">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
+    const pc=r.publicadas>0?Math.round(r.cumplen/r.publicadas*100):null;
+    h+=`<tr><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
+      <td>${fmt(r.publicadas)}</td><td>${fmt(r.cumplen)}</td><td>${pill(pc)}</td>
+      <td>${+r.fuera?`<b style="color:var(--rojo)">${fmt(r.fuera)}</b>`:'0'}</td>
+      <td>${+r.faltantes?`<b style="color:var(--amar,#B7791F)">${fmt(r.faltantes)}</b>`:'0'}</td>
+      <td><button class="btn-cov ghost" style="padding:4px 10px;font-size:12px" onclick="descargarValidacion(${i})">⬇ Excel</button></td></tr>`;
+  });
+  h+='</tbody></table>';
+  ct.innerHTML=h;
+}
+async function descargarValidacion(i){
+  const r=VALID_CACHE&&VALID_CACHE[i];if(!r)return;
+  try{
+    prog('Generando Excel de validación…');
+    const {data,error}=await SB.rpc('validar_detalle',{p_pais:r.pais,p_empresa:r.empresa,p_canal:r.canal});
+    if(error)throw error;
+    const wb=XLSX.utils.book_new();
+    const fuera=(data&&data.fuera)||[],falt=(data&&data.faltantes)||[];
+    const h1=[['Titulo publicado','SKU']].concat(fuera.map(x=>[x.titulo,x.sku||'']));
+    const h2=[['Titulo en matriz','SKU','Tiene Precio']].concat(falt.map(x=>[x.titulo,x.sku||'',x.tiene_precio||'']));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Fuera de matriz');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Faltantes por publicar');
+    const f=new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb,`Validacion_${r.pais}_${r.empresa}_${r.canal}_${f}.xlsx`.replace(/\s+/g,'_'));
+  }catch(e){alert('No se pudo generar el detalle: '+(e.message||e));}
+  finally{prog(null);}
+}
 function esAdmin(){return !!(ME&&ME.rol==='admin')}
 function supaConfigurada(){
   return window.SUPA_URL&&window.SUPA_ANON&&!/TU-PROYECTO|TU-ANON/.test(String(window.SUPA_URL)+String(window.SUPA_ANON));
@@ -1246,17 +1390,34 @@ async function upsertConLineas(tabla,filas,conflict){
   }
   return error;
 }
-async function guardarMatriz(filas){
+async function guardarMatriz(filas,titulos){
   if(!esAdmin()){alert('Solo el administrador puede cargar la matriz.');return}
   try{
     const error=await upsertConLineas('matriz',filas,'empresa');
     if(error)throw error;
+    // Títulos para la validación (tabla matriz_titulos): reemplaza por empresa y sube en lotes
+    let msgTit='';
+    if(titulos&&titulos.length){
+      try{
+        prog('Preparando títulos de la matriz…');
+        const emps=[...new Set(titulos.map(t=>t.empresa))];
+        const del=await SB.from('matriz_titulos').delete().in('empresa',emps);
+        if(del.error)throw del.error;
+        await subirEnLotes('matriz_titulos',titulos,1000,'Subiendo títulos');
+        VALID_CACHE=null;
+        msgTit=`\n${fmt(titulos.length)} títulos guardados para la validación.`;
+      }catch(e2){
+        msgTit=/does not exist|schema cache/i.test(e2.message||'')
+          ?'\n⚠ Títulos NO guardados: falta correr validacion_titulos.sql en Supabase.'
+          :'\n⚠ Títulos NO guardados: '+(e2.message||e2);
+      }finally{prog(null);}
+    }
     await cargarTodo();
     const tp=filas.reduce((a,b)=>a+b.pub,0);
     const det=filas.slice().sort((a,b)=>a.empresa.localeCompare(b.empresa))
       .map(f=>`${f.empresa}: ${fmt(f.pub)} pub / ${fmt(f.sku)} SKU`).join('\n');
-    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}`);
-  }catch(e){alert('No se pudo guardar la matriz: '+(e.message||e));}
+    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}${msgTit}`);
+  }catch(e){prog(null);alert('No se pudo guardar la matriz: '+(e.message||e));}
 }
 function gatearUI(){
   const admin=esAdmin();
