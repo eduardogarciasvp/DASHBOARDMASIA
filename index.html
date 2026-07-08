@@ -530,12 +530,14 @@ const COLS=[
   {key:'pub',lab:'Publicaciones',sub:'P/N OEM',tipo:'num'},
   {key:'pubMz',lab:'Pub. Matriz',sub:'deber ser',tipo:'num'},
   {key:'pctPUB',lab:'% Pub.',sub:'profundidad',tipo:'num'},
+  {key:'fuera',lab:'Fuera política',sub:'≠ matriz',tipo:'num'},
 ];
 function cellVal(r,key){
   switch(key){
     case 'pais':return r.pais; case 'canal':return r.canal; case 'empresa':return r.empresa;
     case 'skuPb':return r.skuPb; case 'skuMz':return skuMz(r); case 'pctSKU':{const v=pctSKU(r);return v==null?-1:v};
     case 'pub':return r.pub; case 'pubMz':return pubMz(r); case 'pctPUB':{const v=pctPUB(r);return v==null?-1:v};
+    case 'fuera':{const v=fueraPol(r);return v==null?-1:v};
   }
 }
 function filas(){
@@ -565,8 +567,20 @@ function totales(rows){
 }
 
 function renderKPIs(){
-  const t=totales(filas());
+  const rows=filas();
+  const t=totales(rows);
   const sc=t.pSKU==null?'is-n':'is-'+cls(t.pSKU), pc=t.pPUB==null?'is-n':'is-'+cls(t.pPUB);
+  const hayVal=rows.some(r=>fueraPol(r)!=null);
+  const tf=rows.reduce((s,r)=>s+(fueraPol(r)||0),0);
+  const tv=rows.reduce((s,r)=>s+(pubValidadas(r)||0),0);
+  const pf=tv?Math.round(tf/tv*100):null;
+  const kFuera=hayVal
+    ? `<div class="kpi ${tf>0?'is-r':'is-g'}"><div class="k-lab">Fuera de política</div>
+        <div class="k-val">${fmt(tf)}</div>
+        <div class="k-sub">títulos ≠ matriz${pf!=null?` · ${pf}% de ${fmt(tv)} validadas`:''}</div></div>`
+    : `<div class="kpi k-blue"><div class="k-lab">Fuera de política</div>
+        <div class="k-val">—</div>
+        <div class="k-sub">carga matriz + publicaciones con título</div></div>`;
   document.getElementById('kpis').innerHTML=`
     <div class="kpi ${sc}"><div class="k-lab">Cumplimiento SKU</div>
       <div class="k-val">${t.pSKU==null?'—':t.pSKU+'<small>%</small>'}</div>
@@ -574,12 +588,10 @@ function renderKPIs(){
     <div class="kpi ${pc}"><div class="k-lab">Cumplimiento Publicaciones</div>
       <div class="k-val">${t.pPUB==null?'—':t.pPUB+'<small>%</small>'}</div>
       <div class="k-sub">${fmt(t.pub)} publicadas de ${fmt(t.pubM)} posibles</div></div>
-    <div class="kpi k-blue"><div class="k-lab">SKUs únicos publicados</div>
-      <div class="k-val">${fmt(t.skuU)}</div>
-      <div class="k-sub">productos distintos (sin doble conteo)</div></div>
     <div class="kpi k-amb"><div class="k-lab">Publicaciones activas</div>
       <div class="k-val">${fmt(t.pub)}</div>
-      <div class="k-sub">listings por número de parte OEM</div></div>`;
+      <div class="k-sub">listings por número de parte OEM</div></div>
+    ${kFuera}`;
 }
 function renderChips(){
   const c=document.getElementById('chips');const labels={pais:'País',canal:'Canal',empresa:'Empresa'};
@@ -633,6 +645,9 @@ function ordenar(key){if(SORT.col===key)SORT.dir*=-1;else{SORT.col=key;SORT.dir=
 function renderTabla(){
   const rows=filas();let h='';
   rows.forEach(r=>{
+    const f=fueraPol(r);
+    const celF=f==null?'<span class="na" title="Falta validación por título (carga matriz + publicaciones con título)">—</span>'
+      :(f>0?`<b style="color:var(--rojo)">${fmt(f)}</b>${pctFuera(r)!=null?` <span class="dim">(${pctFuera(r)}%)</span>`:''}`:'0');
     h+=`<tr>
       <td class="l"><span class="pais-cell">${FLAGS[r.pais]||''} ${r.pais}</span></td>
       <td class="l dim">${r.canal}</td>
@@ -643,17 +658,21 @@ function renderTabla(){
       <td>${fmt(r.pub)}</td>
       <td class="dim">${fmt(pubMz(r))}</td>
       <td>${pill(pctPUB(r))}</td>
+      <td>${celF}</td>
     </tr>`;
   });
-  if(!rows.length)h='<tr><td colspan="9" class="empty">Sin datos para el filtro seleccionado.</td></tr>';
+  if(!rows.length)h='<tr><td colspan="10" class="empty">Sin datos para el filtro seleccionado.</td></tr>';
   const t=totales(rows);
+  const tf=rows.reduce((s,r)=>{const f=fueraPol(r);return s+(f||0);},0);
+  const hayVal=rows.some(r=>fueraPol(r)!=null);
   h+=`<tr class="totrow">
     <td class="l" colspan="3">TOTAL (${rows.length} plataformas)</td>
     <td>${fmt(t.skuU)}</td><td>${fmt(t.skuMzU)}</td><td>${pill(t.pSKU)}</td>
-    <td>${fmt(t.pub)}</td><td>${fmt(t.pubM)}</td><td>${pill(t.pPUB)}</td></tr>`;
+    <td>${fmt(t.pub)}</td><td>${fmt(t.pubM)}</td><td>${pill(t.pPUB)}</td>
+    <td>${hayVal?`<b style="color:var(--rojo)">${fmt(tf)}</b>`:'—'}</td></tr>`;
   document.getElementById('tbody').innerHTML=h;
   document.getElementById('totnote').innerHTML=
-    `Los SKUs del total son <b>productos únicos</b>: por empresa y país se cuenta el catálogo publicado más amplio entre plataformas, no la suma. Las publicaciones sí se suman.`;
+    `Los SKUs del total son <b>productos únicos</b>: por empresa y país se cuenta el catálogo publicado más amplio entre plataformas, no la suma. Las publicaciones sí se suman. <b>Fuera política</b> = títulos publicados que no coinciden con la matriz.`;
 }
 
 // ===== Panel de filtro =====
@@ -839,30 +858,24 @@ function lineaSKU(sku){
 // sku = SKUs físicos distintos (Amazon sin correlativo) · lineas = desglose por familia
 function resumenGrupo(rows,skuCol,titCol,canal){
   const amazon=/amazon/i.test(canal||'');
-  if(!skuCol){
-    if(titCol){const t=new Set();let vacias=0;
-      rows.forEach(x=>{const v=String(x[titCol]==null?'':x[titCol]).trim().toLowerCase().replace(/\s+/g,' ');v?t.add(v):vacias++;});
-      const u=t.size+vacias;return {pub:u,sku:u,dups:rows.length-u,lineas:{}};}
-    return {pub:rows.length,sku:rows.length,dups:0,lineas:{}};
-  }
-  const full=new Set(),fis=new Set(),lin={};let vacias=0;const tmap={};
+  const fis=new Set(),lin={},tmap={};let ci=0;
   rows.forEach(x=>{
-    if(titCol){const tt=String(x[titCol]==null?'':x[titCol]).trim();
-      if(tt){const n=normTitulo(tt);
-        if(!tmap[n])tmap[n]={titulo_norm:n,titulo:tt,sku:skuCol?String(x[skuCol]==null?'':x[skuCol]).trim():null};}}
-    const f=String(x[skuCol]==null?'':x[skuCol]).trim().toUpperCase();
-    if(!f){vacias++;return}
-    const ph=amazon?f.replace(/-\d{3,4}$/,''):f;
-    if(!full.has(f)){
-      full.add(f);
-      const l=lineaSKU(ph);
-      (lin[l]=lin[l]||{pub:0,sku:new Set()}).pub++;
-      lin[l].sku.add(ph);
+    const fRaw=skuCol?String(x[skuCol]==null?'':x[skuCol]).trim():'';
+    const f=fRaw.toUpperCase();
+    const tt=titCol?String(x[titCol]==null?'':x[titCol]).trim():'';
+    const nt=tt?normTitulo(tt):'';
+    // Clave de listing = una publicación: SKU si existe; si no, el título; si no, la fila.
+    const lk=f||(nt?('T::'+nt):('ROW::'+(++ci)));
+    if(!tmap[lk]){
+      tmap[lk]={sku:(fRaw||lk),titulo:(tt||''),titulo_norm:nt};
+      if(f){const ph=amazon?f.replace(/-\d{3,4}$/,''):f;const l=lineaSKU(ph);
+        (lin[l]=lin[l]||{pub:0,sku:new Set()}).pub++;lin[l].sku.add(ph);}
     }
-    fis.add(ph);
+    if(f){const ph=amazon?f.replace(/-\d{3,4}$/,''):f;fis.add(ph);}
   });
   const lineas={};Object.keys(lin).forEach(k=>lineas[k]={pub:lin[k].pub,sku:lin[k].sku.size});
-  return {pub:full.size+vacias,sku:fis.size+vacias,dups:rows.length-full.size-vacias,lineas,tits:Object.values(tmap)};
+  const pub=Object.keys(tmap).length;                 // publicaciones = listings (SKU) distintos
+  return {pub,sku:fis.size,dups:Math.max(0,rows.length-pub),lineas,tits:Object.values(tmap)};
 }
 function analizarPubFile(file){
   return new Promise(res=>{
@@ -1028,7 +1041,7 @@ function cargarMatriz(e){
         iEmp:H.indexOf('Empresa'),
         iPre:H.findIndex(x=>x.toLowerCase().startsWith('tiene precio')),
         iCorto:(H.indexOf('SKU Corto')>=0?H.indexOf('SKU Corto'):H.findIndex(x=>x.toLowerCase().includes('sku corto'))),
-        iSkuC:H.findIndex(x=>x.toLowerCase().includes('sku completo')),
+        iSkuC:(H.findIndex(x=>x.toLowerCase().trim()==='sku completo')>=0?H.findIndex(x=>x.toLowerCase().trim()==='sku completo'):H.findIndex(x=>x.toLowerCase().includes('sku completo'))),
         iTits:H.map((x,ix)=>/^t[ií]tulo/.test(x.toLowerCase())?ix:-1).filter(ix=>ix>=0)});
     });
     if(!hojas.length){alert('No encontré ninguna hoja con las columnas "Empresa" y "Tiene Precio".');return}
@@ -1296,7 +1309,11 @@ function pdfEjecutivo(){buildReporte();document.body.classList.add('modo-reporte
 window.onafterprint=()=>document.body.classList.remove('modo-reporte');
 
 // ===================== Capa Supabase (datos · login · roles) =====================
-let SB=null, ME=null, COBROWS=[], PUBROWS=[], VALID_CACHE=null;
+let SB=null, ME=null, COBROWS=[], PUBROWS=[], VALID_CACHE=null, VALID_MAP={};
+// "Fuera de política" de una tienda = títulos publicados que no coinciden con la matriz
+function fueraPol(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];return v?+v.fuera:null;}
+function pubValidadas(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];return v?+v.publicadas:null;}
+function pctFuera(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];if(!v||!+v.publicadas)return null;return Math.round(+v.fuera/+v.publicadas*100);}
 
 // ===== Pestaña Validación por título =====
 async function cargarValidacion(force){
@@ -1378,6 +1395,8 @@ async function cargarTodo(){
   if(err){alert('Error cargando datos: '+err.message);return}
   MATRIZ_AGG={};(mz.data||[]).forEach(m=>MATRIZ_AGG[m.empresa]={pub:m.pub,sku:m.sku,lineas:m.lineas||{}});
   COBROWS=cob.data||[]; PUBROWS=pub.data||[];
+  // Validación por título (para columna/resumen de "fuera de política"). Silencioso si aún no existe.
+  try{const v=await SB.rpc('validar_resumen');if(!v.error){VALID_CACHE=v.data||[];VALID_MAP={};VALID_CACHE.forEach(r=>VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal]=r);}}catch(e){}
   rebuildDATA(); render();
 }
 // Upsert tolerante: si la columna 'lineas' aún no existe en la base, guarda sin ella y avisa.
