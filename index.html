@@ -289,7 +289,7 @@
     </div>
     <div class="head-actions">
       <button class="btn btn-ghost solo-admin" id="btnMatriz" onclick="document.getElementById('fileMatriz').click()">📋 Cargar matriz</button>
-      <input id="fileMatriz" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="cargarMatriz(event)">
+      <input id="fileMatriz" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarMatriz(event)">
       <button class="btn btn-solid" onclick="document.getElementById('filePub').click()">📦 Cargar publicaciones</button>
       <input id="filePub" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarPublicaciones(event)">
       <button class="btn btn-ghost" onclick="pdfPanel()">🖨 PDF panel</button>
@@ -1023,71 +1023,79 @@ function empresasDisp(){const k=Object.keys(MATRIZ_AGG);return k.length?k.slice(
 function aplicarMatrizADatos(){
   DATA.forEach(r=>{const a=MATRIZ_AGG[r.empresa];if(a){r.smE=a.sku;r.smA=a.sku;r.pmE=a.pub;r.pmA=a.pub;}});
 }
-function cargarMatriz(e){
-  const file=e.target.files[0];e.target.value='';if(!file)return;
-  const r=new FileReader();
-  r.onload=ev=>{try{
-    const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-    // Hojas válidas: las que tienen "Empresa" + "Tiene Precio" (EN, ES, PT...)
-    const hojas=[];
-    wb.SheetNames.forEach(sn=>{
-      const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null});
-      if(!aoa.length)return;
-      const hr=aoa.findIndex(row=>row&&row.some(c=>String(c).trim()==='Empresa')
-        &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio')));
-      if(hr<0)return;
-      const H=aoa[hr].map(c=>String(c==null?'':c).trim());
-      hojas.push({sn,aoa,hr,
-        iEmp:H.indexOf('Empresa'),
-        iPre:H.findIndex(x=>x.toLowerCase().startsWith('tiene precio')),
-        iCorto:(H.indexOf('SKU Corto')>=0?H.indexOf('SKU Corto'):H.findIndex(x=>x.toLowerCase().includes('sku corto'))),
-        iSkuC:(H.findIndex(x=>x.toLowerCase().trim()==='sku completo')>=0?H.findIndex(x=>x.toLowerCase().trim()==='sku completo'):H.findIndex(x=>x.toLowerCase().includes('sku completo'))),
-        iTits:H.map((x,ix)=>/^t[ií]tulo/.test(x.toLowerCase())?ix:-1).filter(ix=>ix>=0)});
-    });
-    if(!hojas.length){alert('No encontré ninguna hoja con las columnas "Empresa" y "Tiene Precio".');return}
-    const ppal=hojas.find(x=>x.sn==='EN')||hojas[0];
-    const agg={},tmap={};
-    hojas.forEach(hj=>{
-      const esPpal=hj===ppal;
-      for(let i=hj.hr+1;i<hj.aoa.length;i++){
-        const row=hj.aoa[i];if(!row)continue;
-        const rawE=row[hj.iEmp];if(rawE==null||String(rawE).trim()==='')continue;
-        const emp=normEmp(rawE);
-        const pre=String(row[hj.iPre]==null?'':row[hj.iPre]).trim().toUpperCase();
-        // Títulos para validación: TODAS las columnas "Titulo *" de TODAS las hojas (idiomas).
-        // "fila" = SKU Completo: identifica el producto para que los faltantes se cuenten
-        // por producto y no por idioma.
-        const filaId=(hj.iSkuC>=0&&row[hj.iSkuC]!=null?String(row[hj.iSkuC]).trim():'')
-          ||(hj.iCorto>=0&&row[hj.iCorto]!=null?String(row[hj.iCorto]).trim():'');
-        hj.iTits.forEach(it=>{
-          const tt=row[it]!=null?String(row[it]).trim():'';if(!tt)return;
-          const n=normTitulo(tt),k=emp+'\u0001'+n;
-          if(!tmap[k])tmap[k]={empresa:emp,titulo_norm:n,titulo:tt,
-            sku:filaId||null,tiene_precio:pre==='SI'?'SI':'NO',fila:filaId||n};
-          else if(pre==='SI')tmap[k].tiene_precio='SI';
-        });
-        // Denominadores: SOLO hoja principal (EN) y solo filas con precio
-        if(!esPpal||pre!=='SI')continue;
-        if(!agg[emp])agg[emp]={pub:0,sku:new Set(),lin:{}};
-        agg[emp].pub++;
-        const sc=hj.iCorto>=0?row[hj.iCorto]:null;
-        const scv=sc!=null?String(sc).trim().toUpperCase():'';
-        if(scv){
-          agg[emp].sku.add(scv);
-          const l=lineaSKU(scv);
-          (agg[emp].lin[l]=agg[emp].lin[l]||{pub:0,sku:new Set()}).pub++;
-          agg[emp].lin[l].sku.add(scv);
-        }
+function leerBuf(file){return new Promise((res,rej)=>{const r=new FileReader();
+  r.onload=ev=>res(new Uint8Array(ev.target.result));r.onerror=()=>rej(new Error('lectura'));r.readAsArrayBuffer(file);});}
+// Procesa un libro (una empresa) y acumula en agg/tmap globales de la carga
+function procesarLibroMatriz(wb,agg,tmap){
+  const hojas=[];
+  wb.SheetNames.forEach(sn=>{
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null});
+    if(!aoa.length)return;
+    const hr=aoa.findIndex(row=>row&&row.some(c=>String(c).trim()==='Empresa')
+      &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio')));
+    if(hr<0)return;
+    const H=aoa[hr].map(c=>String(c==null?'':c).trim());
+    hojas.push({sn,aoa,hr,
+      iEmp:H.indexOf('Empresa'),
+      iPre:H.findIndex(x=>x.toLowerCase().startsWith('tiene precio')),
+      iCorto:(H.indexOf('SKU Corto')>=0?H.indexOf('SKU Corto'):H.findIndex(x=>x.toLowerCase().includes('sku corto'))),
+      iSkuC:(H.findIndex(x=>x.toLowerCase().trim()==='sku completo')>=0?H.findIndex(x=>x.toLowerCase().trim()==='sku completo'):H.findIndex(x=>x.toLowerCase().includes('sku completo'))),
+      iTits:H.map((x,ix)=>/^t[ií]tulo/.test(x.toLowerCase())?ix:-1).filter(ix=>ix>=0)});
+  });
+  if(!hojas.length)return false;
+  const ppal=hojas.find(x=>x.sn==='EN')||hojas[0];
+  hojas.forEach(hj=>{
+    const esPpal=hj===ppal;
+    for(let i=hj.hr+1;i<hj.aoa.length;i++){
+      const row=hj.aoa[i];if(!row)continue;
+      const rawE=row[hj.iEmp];if(rawE==null||String(rawE).trim()==='')continue;
+      const emp=normEmp(rawE);
+      const pre=String(row[hj.iPre]==null?'':row[hj.iPre]).trim().toUpperCase();
+      const filaId=(hj.iSkuC>=0&&row[hj.iSkuC]!=null?String(row[hj.iSkuC]).trim():'')
+        ||(hj.iCorto>=0&&row[hj.iCorto]!=null?String(row[hj.iCorto]).trim():'');
+      hj.iTits.forEach(it=>{
+        const tt=row[it]!=null?String(row[it]).trim():'';if(!tt)return;
+        const n=normTitulo(tt),k=emp+'\u0001'+n;
+        if(!tmap[k])tmap[k]={empresa:emp,titulo_norm:n,titulo:tt,sku:filaId||null,tiene_precio:pre==='SI'?'SI':'NO',fila:filaId||n};
+        else if(pre==='SI')tmap[k].tiene_precio='SI';
+      });
+      if(!esPpal||pre!=='SI')continue;
+      if(!agg[emp])agg[emp]={pub:0,sku:new Set(),lin:{}};
+      agg[emp].pub++;
+      const sc=hj.iCorto>=0?row[hj.iCorto]:null;
+      const scv=sc!=null?String(sc).trim().toUpperCase():'';
+      if(scv){
+        agg[emp].sku.add(scv);
+        const l=lineaSKU(scv);
+        (agg[emp].lin[l]=agg[emp].lin[l]||{pub:0,sku:new Set()}).pub++;
+        agg[emp].lin[l].sku.add(scv);
       }
-    });
-    if(!Object.keys(agg).length){alert('No se contó ninguna fila con precio. Revisa la columna "Tiene Precio".');return}
-    const filas=Object.keys(agg).map(k=>{
-      const lineas={};Object.keys(agg[k].lin).forEach(l=>lineas[l]={pub:agg[k].lin[l].pub,sku:agg[k].lin[l].sku.size});
-      return {empresa:k,pub:agg[k].pub,sku:agg[k].sku.size,lineas};
-    });
-    guardarMatriz(filas,Object.values(tmap)); // conteos + títulos multi-idioma
-  }catch(err){prog(null);alert('No se pudo leer la matriz: '+err.message)}};
-  r.readAsArrayBuffer(file);
+    }
+  });
+  return true;
+}
+async function cargarMatriz(e){
+  const files=[...e.target.files];e.target.value='';if(!files.length)return;
+  const agg={},tmap={};let ok=0,malos=[];
+  try{
+    for(const file of files){
+      prog(`Leyendo ${file.name}…`);
+      try{
+        const wb=XLSX.read(await leerBuf(file),{type:'array'});
+        procesarLibroMatriz(wb,agg,tmap)?ok++:malos.push(file.name);
+      }catch(err){malos.push(file.name);}
+    }
+  }finally{prog(null);}
+  if(!Object.keys(agg).length){
+    alert('No se contó ninguna fila con precio en '+(files.length>1?'los archivos':'el archivo')+'.'
+      +(malos.length?'\nSin columnas Empresa/Tiene Precio: '+malos.join(', '):''));return;
+  }
+  const filas=Object.keys(agg).map(k=>{
+    const lineas={};Object.keys(agg[k].lin).forEach(l=>lineas[l]={pub:agg[k].lin[l].pub,sku:agg[k].lin[l].sku.size});
+    return {empresa:k,pub:agg[k].pub,sku:agg[k].sku.size,lineas};
+  });
+  const avisoMalos=malos.length?`\n⚠ Ignorados (sin columnas Empresa/Tiene Precio): ${malos.join(', ')}`:'';
+  guardarMatriz(filas,Object.values(tmap),avisoMalos); // conteos + títulos multi-idioma multi-archivo
 }
 
 // ===== Pestaña Cobertura =====
@@ -1409,7 +1417,7 @@ async function upsertConLineas(tabla,filas,conflict){
   }
   return error;
 }
-async function guardarMatriz(filas,titulos){
+async function guardarMatriz(filas,titulos,aviso){
   if(!esAdmin()){alert('Solo el administrador puede cargar la matriz.');return}
   try{
     const error=await upsertConLineas('matriz',filas,'empresa');
@@ -1435,7 +1443,7 @@ async function guardarMatriz(filas,titulos){
     const tp=filas.reduce((a,b)=>a+b.pub,0);
     const det=filas.slice().sort((a,b)=>a.empresa.localeCompare(b.empresa))
       .map(f=>`${f.empresa}: ${fmt(f.pub)} pub / ${fmt(f.sku)} SKU`).join('\n');
-    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}${msgTit}`);
+    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}${msgTit}${aviso||''}`);
   }catch(e){prog(null);alert('No se pudo guardar la matriz: '+(e.message||e));}
 }
 function gatearUI(){
