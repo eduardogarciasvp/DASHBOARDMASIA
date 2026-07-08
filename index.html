@@ -416,7 +416,7 @@
       <div class="note">
         <b>Cómo funciona:</b> la comparación es exacta por título, ignorando mayúsculas y espacios repetidos (y unificando las variantes de Sullivan/Palatek). Acepta <b>todos los idiomas</b> que traiga la matriz (columnas u hojas Titulo EN / ES / PT): los faltantes se cuentan por <b>producto</b>, no por idioma.
         Un título como <i>"1613-6105-00 Filtro de Aceite Atlas Copco"</i> <b>no cumple</b> si la matriz dice <i>"…Compatible con Atlas Copco"</i> — aparecerá en <b>Fuera de matriz</b> y su versión correcta en <b>Faltantes</b>.
-        El botón <b>⬇ Excel</b> descarga ambas listas con Título, SKU y Tiene Precio.
+        El botón <b>⬇ Excel</b> descarga tres hojas: <b>Cumplen</b> (correctas, para control), <b>Fuera de matriz</b> y <b>Faltantes por publicar</b>, con Título, SKU y Tiene Precio.
       </div>
     </div>
   </div>
@@ -1364,9 +1364,11 @@ async function descargarValidacion(i){
     const {data,error}=await SB.rpc('validar_detalle',{p_pais:r.pais,p_empresa:r.empresa,p_canal:r.canal});
     if(error)throw error;
     const wb=XLSX.utils.book_new();
-    const fuera=(data&&data.fuera)||[],falt=(data&&data.faltantes)||[];
+    const cumplen=(data&&data.cumplen)||[],fuera=(data&&data.fuera)||[],falt=(data&&data.faltantes)||[];
+    const h0=[['Titulo publicado','SKU','Titulo en matriz']].concat(cumplen.map(x=>[x.titulo,x.sku||'',x.titulo_matriz||'']));
     const h1=[['Titulo publicado','SKU']].concat(fuera.map(x=>[x.titulo,x.sku||'']));
     const h2=[['Titulo en matriz','SKU','Tiene Precio']].concat(falt.map(x=>[x.titulo,x.sku||'',x.tiene_precio||'']));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h0),'Cumplen');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Fuera de matriz');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Faltantes por publicar');
     const f=new Date().toISOString().slice(0,10);
