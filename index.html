@@ -1041,7 +1041,10 @@ function procesarLibroMatriz(wb,agg,tmap){
       iPre:H.findIndex(x=>x.toLowerCase().startsWith('tiene precio')),
       iCorto:(H.indexOf('SKU Corto')>=0?H.indexOf('SKU Corto'):H.findIndex(x=>x.toLowerCase().includes('sku corto'))),
       iSkuC:(H.findIndex(x=>x.toLowerCase().trim()==='sku completo')>=0?H.findIndex(x=>x.toLowerCase().trim()==='sku completo'):H.findIndex(x=>x.toLowerCase().includes('sku completo'))),
-      iTits:H.map((x,ix)=>/^t[ií]tulo/.test(x.toLowerCase())?ix:-1).filter(ix=>ix>=0)});
+      iFam:H.findIndex(x=>/familia/i.test(x)&&/sku/i.test(x)),
+      iTits:H.map((x,ix)=>{if(!/^t[ií]tulo/.test(x.toLowerCase()))return null;
+        const u=x.toUpperCase();const idi=/\bES\b|ESPA|ESPAÑ/.test(u)?'ES':(/\bPT\b|PORT/.test(u)?'PT':(/\bEN\b|ENG/.test(u)?'EN':(sn.toUpperCase()==='ES'?'ES':sn.toUpperCase()==='PT'?'PT':'EN')));
+        return {ix,idi};}).filter(Boolean)});
   });
   if(!hojas.length)return false;
   const ppal=hojas.find(x=>x.sn==='EN')||hojas[0];
@@ -1052,12 +1055,15 @@ function procesarLibroMatriz(wb,agg,tmap){
       const rawE=row[hj.iEmp];if(rawE==null||String(rawE).trim()==='')continue;
       const emp=normEmp(rawE);
       const pre=String(row[hj.iPre]==null?'':row[hj.iPre]).trim().toUpperCase();
-      const filaId=(hj.iSkuC>=0&&row[hj.iSkuC]!=null?String(row[hj.iSkuC]).trim():'')
-        ||(hj.iCorto>=0&&row[hj.iCorto]!=null?String(row[hj.iCorto]).trim():'');
-      hj.iTits.forEach(it=>{
-        const tt=row[it]!=null?String(row[it]).trim():'';if(!tt)return;
+      const skuComp=(hj.iSkuC>=0&&row[hj.iSkuC]!=null?String(row[hj.iSkuC]).trim():'');
+      const famId=(hj.iFam>=0&&row[hj.iFam]!=null?String(row[hj.iFam]).trim():'');
+      // "fila" identifica un LISTING (una equivalencia OEM): SKU Único por Familia.
+      // Así los faltantes se cuentan/listan por listing y no se colapsan por producto físico.
+      const filaId=famId||skuComp||(hj.iCorto>=0&&row[hj.iCorto]!=null?String(row[hj.iCorto]).trim():'');
+      hj.iTits.forEach(o=>{
+        const tt=row[o.ix]!=null?String(row[o.ix]).trim():'';if(!tt)return;
         const n=normTitulo(tt),k=emp+'\u0001'+n;
-        if(!tmap[k])tmap[k]={empresa:emp,titulo_norm:n,titulo:tt,sku:filaId||null,tiene_precio:pre==='SI'?'SI':'NO',fila:filaId||n};
+        if(!tmap[k])tmap[k]={empresa:emp,titulo_norm:n,titulo:tt,sku:skuComp||filaId,tiene_precio:pre==='SI'?'SI':'NO',fila:filaId||n,idioma:o.idi};
         else if(pre==='SI')tmap[k].tiene_precio='SI';
       });
       if(!esPpal||pre!=='SI')continue;
