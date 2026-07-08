@@ -864,17 +864,18 @@ function resumenGrupo(rows,skuCol,titCol,canal){
     const f=fRaw.toUpperCase();
     const tt=titCol?String(x[titCol]==null?'':x[titCol]).trim():'';
     const nt=tt?normTitulo(tt):'';
-    // Clave de listing = una publicación: SKU si existe; si no, el título; si no, la fila.
-    const lk=f||(nt?('T::'+nt):('ROW::'+(++ci)));
-    if(!tmap[lk]){
-      tmap[lk]={sku:(fRaw||lk),titulo:(tt||''),titulo_norm:nt};
-      if(f){const ph=amazon?f.replace(/-\d{3,4}$/,''):f;const l=lineaSKU(ph);
-        (lin[l]=lin[l]||{pub:0,sku:new Set()}).pub++;lin[l].sku.add(ph);}
-    }
-    if(f){const ph=amazon?f.replace(/-\d{3,4}$/,''):f;fis.add(ph);}
+    // Identidad de una PUBLICACIÓN = título + SKU (un listing). Así:
+    //  · Amazon: el SKU es único por listing → cada listing cuenta.
+    //  · Masia Shop / ML: el SKU se repite, pero el título es único por listing → cada listing cuenta.
+    //  · Duplicado real (mismo título Y mismo SKU) → se descarta.
+    const lk=(nt||f)?(nt+'\u241F'+f):('ROW::'+(++ci));
+    if(!tmap[lk])tmap[lk]={lk,sku:fRaw,titulo:tt,titulo_norm:nt};
+    if(f){const ph=amazon?f.replace(/-\d{3,4}$/,''):f;
+      if(!fis.has(ph)){fis.add(ph);const l=lineaSKU(ph);
+        (lin[l]=lin[l]||{pub:0,sku:new Set()}).pub++;lin[l].sku.add(ph);}}
   });
   const lineas={};Object.keys(lin).forEach(k=>lineas[k]={pub:lin[k].pub,sku:lin[k].sku.size});
-  const pub=Object.keys(tmap).length;                 // publicaciones = listings (SKU) distintos
+  const pub=Object.keys(tmap).length;                 // publicaciones = listings (título+SKU) distintos
   return {pub,sku:fis.size,dups:Math.max(0,rows.length-pub),lineas,tits:Object.values(tmap)};
 }
 function analizarPubFile(file){
