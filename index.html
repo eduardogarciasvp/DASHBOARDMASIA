@@ -1262,6 +1262,7 @@ function metasDe(a,m){
 // Objetivo de una tienda: publicaciones (P) + SKUs (S). Si hay meta manual guardada, manda.
 function objetivoTienda(r){
   const man=OBJ_MAP[r.pais+'|'+r.empresa+'|'+r.canal];
+  if(man&&man.excluir)return {P:null,S:null,manual:false,excluido:true,b:0,paso:0,metas:[],tipo:'ok'};
   const w1=proxMier(1);
   let P=metasDe(r.pub,pubMz(r)),S=metasDe(r.skuPb,skuMz(r)),manual=false;
   if(man&&man.meta_pub!=null){const b=Math.max(0,man.meta_pub-r.pub);
@@ -1394,27 +1395,30 @@ function renderObjetivos(){
   const st=document.getElementById('objStatus'),ct=document.getElementById('objTabla');if(!ct)return;
   const w1=proxMier(1);
   st.className='covstat ok';
-  st.innerHTML=`Próxima revisión: <b>${fFec(w1)}</b>. La meta guardada manda sobre la automática y aparece en el PDF como <b>[meta fijada]</b>.`;
+  st.innerHTML=`Próxima revisión: <b>${fFec(w1)}</b>. La meta guardada manda sobre la automática y aparece en el PDF como <b>[meta fijada]</b>. Marca <b>Excluir</b> para que una tienda no aparezca en los objetivos del PDF.`;
   const admin=esAdmin();
   const rows=DATA.slice().sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)||a.empresa.localeCompare(b.empresa)||a.canal.localeCompare(b.canal));
-  let hd='<table class="mat" style="min-width:860px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Pub. hoy</th><th>Meta pub. ('+fFec(w1)+')</th><th>SKU hoy</th><th>Meta SKU ('+fFec(w1)+')</th></tr></thead><tbody>';
-  if(!rows.length)hd+='<tr><td colspan="7" class="empty">Sin tiendas: define la cobertura primero.</td></tr>';
+  let hd='<table class="mat" style="min-width:920px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Pub. hoy</th><th>Meta pub. ('+fFec(w1)+')</th><th>SKU hoy</th><th>Meta SKU ('+fFec(w1)+')</th><th title="La tienda no aparece en los objetivos del PDF">Excluir</th></tr></thead><tbody>';
+  if(!rows.length)hd+='<tr><td colspan="8" class="empty">Sin tiendas: define la cobertura primero.</td></tr>';
   let pais0=null;
   rows.forEach(r=>{
-    if(r.pais!==pais0){hd+=`<tr class="grp-row"><td colspan="7">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
+    if(r.pais!==pais0){hd+=`<tr class="grp-row"><td colspan="8">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
     const k=r.pais+'|'+r.empresa+'|'+r.canal, man=OBJ_MAP[k]||{};
+    const exc=!!man.excluir;
     const aP=metasDe(r.pub,pubMz(r)),aS=metasDe(r.skuPb,skuMz(r));
     const phP=aP&&aP.metas.length?String(aP.metas[0].v):'—';
     const phS=aS&&aS.metas.length?String(aS.metas[0].v):'—';
     const vP=man.meta_pub!=null?man.meta_pub:'';
     const vS=man.meta_sku!=null?man.meta_sku:'';
-    const inP=admin?`<input type="number" min="0" class="objin" data-k="${k}" data-t="pub" value="${vP}" placeholder="${phP}">`
-                   :(vP!==''?`<b>${fmt(vP)}</b>`:`<span class="dim">${phP==='—'?'—':fmt(+phP)} (auto)</span>`);
-    const inS=admin?`<input type="number" min="0" class="objin" data-k="${k}" data-t="sku" value="${vS}" placeholder="${phS}">`
-                   :(vS!==''?`<b>${fmt(vS)}</b>`:`<span class="dim">${phS==='—'?'—':fmt(+phS)} (auto)</span>`);
-    hd+=`<tr><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
+    const inP=admin?`<input type="number" min="0" class="objin" data-k="${k}" data-t="pub" value="${vP}" placeholder="${phP}" ${exc?'disabled':''}>`
+                   :(exc?'<span class="dim">excluida</span>':(vP!==''?`<b>${fmt(vP)}</b>`:`<span class="dim">${phP==='—'?'—':fmt(+phP)} (auto)</span>`));
+    const inS=admin?`<input type="number" min="0" class="objin" data-k="${k}" data-t="sku" value="${vS}" placeholder="${phS}" ${exc?'disabled':''}>`
+                   :(exc?'<span class="dim">excluida</span>':(vS!==''?`<b>${fmt(vS)}</b>`:`<span class="dim">${phS==='—'?'—':fmt(+phS)} (auto)</span>`));
+    const chk=admin?`<input type="checkbox" class="objexc" data-k="${k}" ${exc?'checked':''} style="width:16px;height:16px;accent-color:var(--rojo);cursor:pointer" onchange="this.closest('tr').querySelectorAll('.objin').forEach(x=>x.disabled=this.checked)">`
+                   :(exc?'<b style="color:var(--rojo)">✕</b>':'');
+    hd+=`<tr${exc?' style="opacity:.62"':''}><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
       <td>${fmt(r.pub)} <span class="dim">/ ${fmt(pubMz(r))}</span></td><td>${inP}</td>
-      <td>${fmt(r.skuPb)} <span class="dim">/ ${fmt(skuMz(r))}</span></td><td>${inS}</td></tr>`;
+      <td>${fmt(r.skuPb)} <span class="dim">/ ${fmt(skuMz(r))}</span></td><td>${inS}</td><td>${chk}</td></tr>`;
   });
   hd+='</tbody></table>';
   ct.innerHTML=hd;
@@ -1434,18 +1438,29 @@ async function guardarObjetivos(){
   const filas=[];const vals={};
   document.querySelectorAll('#objTabla .objin').forEach(i=>{
     const k=i.dataset.k;(vals[k]=vals[k]||{})[i.dataset.t]=i.value.trim();});
+  document.querySelectorAll('#objTabla .objexc').forEach(c=>{
+    const k=c.dataset.k;(vals[k]=vals[k]||{}).exc=c.checked;});
   Object.keys(vals).forEach(k=>{
     const [pais,empresa,canal]=k.split('|');const v=vals[k];
-    if(v.pub!==''||v.sku!=='')filas.push({pais,empresa,canal,
-      meta_pub:v.pub!==''?+v.pub:null,meta_sku:v.sku!==''?+v.sku:null});
+    if(v.exc)filas.push({pais,empresa,canal,meta_pub:null,meta_sku:null,excluir:true});
+    else if(v.pub!==''||v.sku!=='')filas.push({pais,empresa,canal,
+      meta_pub:v.pub!==''?+v.pub:null,meta_sku:v.sku!==''?+v.sku:null,excluir:false});
   });
   try{
     prog('Guardando objetivos…');
     const del=await SB.from('objetivos_tienda').delete().neq('pais','\u0000');
     if(del.error)throw del.error;
-    if(filas.length){const ins=await SB.from('objetivos_tienda').insert(filas);if(ins.error)throw ins.error;}
+    if(filas.length){
+      let ins=await SB.from('objetivos_tienda').insert(filas);
+      if(ins.error&&/excluir/i.test(ins.error.message||'')){
+        ins=await SB.from('objetivos_tienda').insert(filas.filter(f=>!f.excluir).map(f=>{const {excluir,...r}=f;return r}));
+        if(!ins.error)alert('⚠ Exclusiones NO guardadas: corre el ALTER de "excluir" en Supabase (objetivos_semana.sql).');
+      }
+      if(ins.error)throw ins.error;
+    }
     await cargarTodo();renderObjetivos();
-    alert(`✓ Objetivos guardados: ${filas.length} tienda(s) con meta fijada; el resto usa la propuesta automática.`);
+    const nExc=filas.filter(f=>f.excluir).length;
+    alert(`✓ Objetivos guardados: ${filas.length-nExc} tienda(s) con meta fijada · ${nExc} excluida(s) del PDF; el resto usa la propuesta automática.`);
   }catch(e){alert(/does not exist|schema cache/i.test(e.message||'')?'⚠ Falta correr objetivos_semana.sql en Supabase.':'No se pudo guardar: '+(e.message||e));}
   finally{prog(null);}
 }
