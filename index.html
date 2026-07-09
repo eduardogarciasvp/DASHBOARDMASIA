@@ -229,6 +229,14 @@
   .covdel{background:var(--rojo-bg);color:var(--rojo);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-weight:800;line-height:1}
   .covdel:hover{filter:brightness(.96)}
 
+  .objin{width:92px;font-size:13px;border:1px solid var(--linea);border-radius:7px;padding:6px 8px;text-align:right;background:#fff}
+  .objin::placeholder{color:#B9C2D0}
+  .objin:focus{outline:2px solid var(--ambar)}
+  .objtxt{flex:1;min-width:260px;font-size:13px;border:1px solid var(--linea);border-radius:8px;padding:8px 10px;background:#fff}
+  .objpers{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--linea);border-radius:9px;background:var(--blanco);margin-top:8px;font-size:13px}
+  .objpers .amb{font-size:11px;font-weight:700;color:var(--azul);background:var(--papel);border:1px solid var(--linea);border-radius:6px;padding:2px 8px;white-space:nowrap}
+  .objpers .tx{flex:1}
+
   #reporte{display:none}
   .rep-page{padding:6mm 2mm}
   .rep-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid var(--azul);padding-bottom:8px;margin-bottom:14px}
@@ -306,6 +314,7 @@
     <button class="tab" id="tab2" onclick="setPage(2)">Resumen general · Matriz</button>
     <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
     <button class="tab" id="tab4" onclick="setPage(4)">Validación · Títulos</button>
+    <button class="tab" id="tab5" onclick="setPage(5)">Objetivos · Semana</button>
   </div>
 
   <!-- ===================== PÁGINA 1 ===================== -->
@@ -408,7 +417,7 @@
     <div class="sec" style="margin-top:18px">
       <div class="sec-h">
         <h2>Validación por título · Publicado vs Matriz</h2>
-        <span class="hint"><b>Cumplen</b> = título publicado existe en la matriz de su empresa · <b>Fuera</b> = publicado pero no está en la matriz · <b>Faltantes</b> = en matriz con precio, sin publicar en esa tienda.</span>
+        <span class="hint"><b>Cumplen</b> = título publicado existe en la matriz de su empresa · <b>Fuera</b> = publicado pero no está en la matriz · <b>Faltantes</b> = títulos de la matriz (con precio) sin publicar en esa tienda, cada uno con su SKU único por familia.</span>
       </div>
       <div id="valStatus" class="covstat warn"></div>
       <div style="margin-bottom:12px"><button class="btn-cov ghost" onclick="cargarValidacion(true)">↻ Actualizar</button></div>
@@ -418,6 +427,34 @@
         Un título como <i>"1613-6105-00 Filtro de Aceite Atlas Copco"</i> <b>no cumple</b> si la matriz dice <i>"…Compatible con Atlas Copco"</i> — aparecerá en <b>Fuera de matriz</b> y su versión correcta en <b>Faltantes</b>.
         El botón <b>⬇ Excel</b> descarga tres hojas: <b>Cumplen</b> (correctas, para control), <b>Fuera de matriz</b> y <b>Faltantes por publicar</b>, con Título, SKU y Tiene Precio.
       </div>
+    </div>
+  </div>
+
+  <!-- ===================== PÁGINA 5 · OBJETIVOS SEMANALES ===================== -->
+  <div class="page" id="page5">
+    <div class="sec" style="margin-top:18px">
+      <div class="sec-h">
+        <h2>Objetivos de la semana · por tienda</h2>
+        <span class="hint">Estas metas alimentan el <b>PDF ejecutivo</b>. Casilla vacía = se usa la propuesta automática (mostrada en gris).</span>
+      </div>
+      <div id="objStatus" class="covstat warn"></div>
+      <div class="solo-admin" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-cov" onclick="guardarObjetivos()">💾 Guardar objetivos</button>
+        <button class="btn-cov ghost" onclick="autoObjetivos()">↺ Rellenar con la propuesta automática</button>
+        <button class="btn-cov ghost" onclick="limpiarObjetivos()">Vaciar metas (volver a automático)</button>
+      </div>
+      <div class="tbl-wrap"><div id="objTabla"></div></div>
+
+      <div class="sec-h" style="margin-top:22px">
+        <h2>Objetivos personalizados</h2>
+        <span class="hint">Metas no ligadas a publicaciones (fotos, precios, campañas...). Aparecen en el PDF, en la página del país o en el resumen general.</span>
+      </div>
+      <div class="covform solo-admin">
+        <div class="covpg"><label>Ámbito</label><select id="objPais"></select></div>
+        <div class="covpg" style="flex:1;min-width:280px"><label>Objetivo</label><input id="objTexto" class="objtxt" placeholder="Ej.: Completar fotos reales de la línea RAD en ML México"></div>
+        <button class="btn-cov" onclick="agregarObjPers()">+ Agregar</button>
+      </div>
+      <div id="objPersList"></div>
     </div>
   </div>
 
@@ -771,11 +808,12 @@ function upd(idx,campo,el){
 function setMetrica(m){METRICA=m;
   document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
 function setPage(n){PAGE=n;
-  for(let i=1;i<=4;i++){
+  for(let i=1;i<=5;i++){
     document.getElementById('page'+i).classList.toggle('on',n===i);
     document.getElementById('tab'+i).classList.toggle('on',n===i);
   }
   if(n===4&&!VALID_CACHE&&SB)cargarValidacion();
+  if(n===5&&SB)renderObjetivos();
 }
 
 // ===== Carga de PUBLICACIONES (real) =====
@@ -1211,20 +1249,39 @@ function proxMier(n){const d=new Date();let add=(3-d.getDay()+7)%7;if(add===0)ad
 function fFec(d){return d.toLocaleDateString('es',{weekday:'short',day:'2-digit',month:'short'});}
 // Metas alcanzables por tienda a partir de la brecha de publicaciones:
 //  ≤200: cerrar todo esta semana · ≤1.000: quincenal (50%/100%) · mayor: ritmo semanal del 10% (mín. 100)
-function objetivoTienda(r){
-  const m=pubMz(r),a=r.pub,b=Math.max(0,m-a);
-  if(!m)return {tipo:'sinmz'};
-  if(b===0)return {tipo:'ok'};
+function metasDe(a,m){
+  if(!m)return null;
+  const b=Math.max(0,m-(a||0));
+  if(b===0)return {tipo:'ok',b:0,paso:0,metas:[]};
   const w1=proxMier(1),w2=proxMier(2);
   if(b<=200)return {tipo:'sem',b,paso:b,metas:[{f:w1,v:m}]};
   if(b<=1000)return {tipo:'quin',b,paso:Math.ceil(b/2),metas:[{f:w1,v:a+Math.ceil(b/2)},{f:w2,v:m}]};
   const paso=Math.max(100,Math.round(b*0.10/10)*10);
   return {tipo:'cont',b,paso,metas:[{f:w1,v:a+paso},{f:w2,v:Math.min(m,a+2*paso)}]};
 }
+// Objetivo de una tienda: publicaciones (P) + SKUs (S). Si hay meta manual guardada, manda.
+function objetivoTienda(r){
+  const man=OBJ_MAP[r.pais+'|'+r.empresa+'|'+r.canal];
+  const w1=proxMier(1);
+  let P=metasDe(r.pub,pubMz(r)),S=metasDe(r.skuPb,skuMz(r)),manual=false;
+  if(man&&man.meta_pub!=null){const b=Math.max(0,man.meta_pub-r.pub);
+    P={tipo:'manual',b,paso:b,metas:b>0?[{f:w1,v:man.meta_pub}]:[]};manual=true;}
+  if(man&&man.meta_sku!=null){const b=Math.max(0,man.meta_sku-r.skuPb);
+    S={tipo:'manual',b,paso:b,metas:b>0?[{f:w1,v:man.meta_sku}]:[]};manual=true;}
+  return {P,S,manual,
+    b:(P?P.b:0),paso:(P?P.paso:0),metas:(P?P.metas:[]),tipo:(P?P.tipo:'ok')}; // alias pub (compatibilidad)
+}
 function objTxt(r,o){
-  const metas=o.metas.map(x=>`<b>${fmt(x.v)}</b> para ${fFec(x.f)}`).join(' · ');
-  const cola=o.tipo==='cont'?` (ritmo ${fmt(o.paso)}/sem hasta cerrar)`:(o.tipo==='quin'?' (quincenal)':'');
-  return `hoy <b>${fmt(r.pub)}</b> de ${fmt(pubMz(r))} publicaciones → ${metas}${cola}`;
+  const parts=[];
+  if(o.P&&o.P.b>0&&o.P.metas.length){
+    const m=o.P.metas.map(x=>`<b>${fmt(x.v)}</b> (${fFec(x.f)})`).join(' · ');
+    parts.push(`pub. hoy <b>${fmt(r.pub)}</b>/${fmt(pubMz(r))} → ${m}${o.P.tipo==='cont'?` · ritmo ${fmt(o.P.paso)}/sem`:(o.P.tipo==='quin'?' · quincenal':'')}`);
+  }
+  if(o.S&&o.S.b>0&&o.S.metas.length){
+    const m=o.S.metas.map(x=>`<b>${fmt(x.v)}</b> (${fFec(x.f)})`).join(' · ');
+    parts.push(`SKUs hoy <b>${fmt(r.skuPb)}</b>/${fmt(skuMz(r))} → ${m}`);
+  }
+  return parts.join(' &nbsp;|&nbsp; ')+(o.manual?' <span style="color:var(--azul);font-weight:600">[meta fijada]</span>':'');
 }
 // Líneas de producto con mayor brecha para una tienda (matriz vs publicado)
 function lineasCriticas(r,topN){
@@ -1263,8 +1320,8 @@ function buildReporte(){
       <td>${fmt(tg.skuU)}</td><td>${fmt(tg.skuMzU)}</td><td>${pp(tg.pSKU)}</td>
       <td>${fmt(tg.pub)}</td><td>${fmt(tg.pubM)}</td><td>${pp(tg.pPUB)}</td><td>${all.length}</td></tr></tbody></table>`;
   // Objetivos de la red: tiendas con mayor brecha, con meta y fecha
-  const objs=all.map(r=>({r,o:objetivoTienda(r)})).filter(x=>x.o.metas&&x.o.b>0).sort((a,b)=>b.o.b-a.o.b);
-  const metaRed=objs.reduce((s,x)=>s+(x.o.metas[0].v-x.r.pub),0);
+  const objs=all.map(r=>({r,o:objetivoTienda(r)})).filter(x=>(x.o.P&&x.o.P.b>0)||(x.o.S&&x.o.S.b>0)).sort((a,b)=>b.o.b-a.o.b);
+  const metaRed=objs.reduce((s,x)=>s+((x.o.P&&x.o.P.metas.length)?(x.o.P.metas[0].v-x.r.pub):0),0);
   H+=`<div class="rep-sub">Objetivos de la red · próxima revisión ${fFec(w1)}</div><ul class="acc">`;
   if(objs.length){
     H+=`<li class="b"><b>Meta global de la semana:</b> publicar <b>+${fmt(metaRed)}</b> publicaciones netas en la red (de ${fmt(tg.pub)} a ${fmt(tg.pub+metaRed)}) antes del ${fFec(w1)}.</li>`;
@@ -1272,6 +1329,7 @@ function buildReporte(){
       H+=`<li class="${x.o.tipo==='cont'?'r':'y'}"><b>${x.r.pais} · ${x.r.empresa} · ${x.r.canal}</b> — ${objTxt(x.r,x.o)}</li>`;});
     if(objs.length>8)H+=`<li class="y">+${objs.length-8} tiendas más con brecha — detalle en las páginas por país.</li>`;
   } else H+='<li class="g">Sin brechas de publicaciones o falta cargar la matriz para medir.</li>';
+  CUSTOM_OBJS.filter(o=>!o.pais).forEach(o=>H+=`<li class="b"><b>Objetivo adicional:</b> ${o.texto}</li>`);
   H+=`</ul><div class="rep-foot"><span>Masia Group · Gestión E-commerce</span><span>Confidencial · uso interno</span></div></div>`;
   // ---------- Página por país ----------
   ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).forEach(p=>{
@@ -1288,11 +1346,12 @@ function buildReporte(){
     H+='<div class="rep-sub">Detalle por plataforma</div>'+repTabla(rs);
     // Objetivos por tienda del país
     const po=rs.map(r=>({r,o:objetivoTienda(r)}));
-    const conMeta=po.filter(x=>x.o.metas&&x.o.b>0).sort((a,b)=>b.o.b-a.o.b);
-    H+=`<div class="rep-sub">Objetivos · revisión ${fFec(w1)}${conMeta.some(x=>x.o.metas.length>1)?' y '+fFec(w2):''}</div><ul class="acc">`;
+    const conMeta=po.filter(x=>(x.o.P&&x.o.P.b>0)||(x.o.S&&x.o.S.b>0)).sort((a,b)=>b.o.b-a.o.b);
+    H+=`<div class="rep-sub">Objetivos · revisión ${fFec(w1)}${conMeta.some(x=>x.o.P&&x.o.P.metas.length>1)?' y '+fFec(w2):''}</div><ul class="acc">`;
     if(conMeta.length)conMeta.forEach(x=>{
       H+=`<li class="${x.o.tipo==='cont'?'r':'y'}"><b>${x.r.empresa} · ${x.r.canal}</b> — ${objTxt(x.r,x.o)}</li>`;});
     else H+='<li class="g">Todos los canales del país cumplen su matriz (o falta cargar la matriz).</li>';
+    CUSTOM_OBJS.filter(o=>o.pais===p).forEach(o=>H+=`<li class="b"><b>Objetivo adicional:</b> ${o.texto}</li>`);
     H+='</ul>';
     // Líneas de producto a priorizar (donde menos se ha publicado)
     let bloq='';let notas=new Set();
@@ -1324,11 +1383,86 @@ function pdfEjecutivo(){buildReporte();document.body.classList.add('modo-reporte
 window.onafterprint=()=>document.body.classList.remove('modo-reporte');
 
 // ===================== Capa Supabase (datos · login · roles) =====================
-let SB=null, ME=null, COBROWS=[], PUBROWS=[], VALID_CACHE=null, VALID_MAP={};
+let SB=null, ME=null, COBROWS=[], PUBROWS=[], VALID_CACHE=null, VALID_MAP={}, OBJ_MAP={}, CUSTOM_OBJS=[];
 // "Fuera de política" de una tienda = títulos publicados que no coinciden con la matriz
-function fueraPol(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];return v?+v.fuera:null;}
+function fueraPol(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];if(!v)return null;if(+v.publicadas===0&&r.pub>0)return null;return +v.fuera;}
 function pubValidadas(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];return v?+v.publicadas:null;}
 function pctFuera(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];if(!v||!+v.publicadas)return null;return Math.round(+v.fuera/+v.publicadas*100);}
+
+// ===== Pestaña Objetivos semanales =====
+function renderObjetivos(){
+  const st=document.getElementById('objStatus'),ct=document.getElementById('objTabla');if(!ct)return;
+  const w1=proxMier(1);
+  st.className='covstat ok';
+  st.innerHTML=`Próxima revisión: <b>${fFec(w1)}</b>. La meta guardada manda sobre la automática y aparece en el PDF como <b>[meta fijada]</b>.`;
+  const admin=esAdmin();
+  const rows=DATA.slice().sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)||a.empresa.localeCompare(b.empresa)||a.canal.localeCompare(b.canal));
+  let hd='<table class="mat" style="min-width:860px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Pub. hoy</th><th>Meta pub. ('+fFec(w1)+')</th><th>SKU hoy</th><th>Meta SKU ('+fFec(w1)+')</th></tr></thead><tbody>';
+  if(!rows.length)hd+='<tr><td colspan="7" class="empty">Sin tiendas: define la cobertura primero.</td></tr>';
+  let pais0=null;
+  rows.forEach(r=>{
+    if(r.pais!==pais0){hd+=`<tr class="grp-row"><td colspan="7">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
+    const k=r.pais+'|'+r.empresa+'|'+r.canal, man=OBJ_MAP[k]||{};
+    const aP=metasDe(r.pub,pubMz(r)),aS=metasDe(r.skuPb,skuMz(r));
+    const phP=aP&&aP.metas.length?String(aP.metas[0].v):'—';
+    const phS=aS&&aS.metas.length?String(aS.metas[0].v):'—';
+    const vP=man.meta_pub!=null?man.meta_pub:'';
+    const vS=man.meta_sku!=null?man.meta_sku:'';
+    const inP=admin?`<input type="number" min="0" class="objin" data-k="${k}" data-t="pub" value="${vP}" placeholder="${phP}">`
+                   :(vP!==''?`<b>${fmt(vP)}</b>`:`<span class="dim">${phP==='—'?'—':fmt(+phP)} (auto)</span>`);
+    const inS=admin?`<input type="number" min="0" class="objin" data-k="${k}" data-t="sku" value="${vS}" placeholder="${phS}">`
+                   :(vS!==''?`<b>${fmt(vS)}</b>`:`<span class="dim">${phS==='—'?'—':fmt(+phS)} (auto)</span>`);
+    hd+=`<tr><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
+      <td>${fmt(r.pub)} <span class="dim">/ ${fmt(pubMz(r))}</span></td><td>${inP}</td>
+      <td>${fmt(r.skuPb)} <span class="dim">/ ${fmt(skuMz(r))}</span></td><td>${inS}</td></tr>`;
+  });
+  hd+='</tbody></table>';
+  ct.innerHTML=hd;
+  // ámbitos del select de personalizados
+  const ps=document.getElementById('objPais');
+  if(ps&&!ps.dataset.init){ps.innerHTML='<option value="">General (toda la red)</option>'+ORD_PAIS.map(v=>`<option>${v}</option>`).join('');ps.dataset.init='1';}
+  const pl=document.getElementById('objPersList');
+  pl.innerHTML=CUSTOM_OBJS.length?CUSTOM_OBJS.map(o=>`<div class="objpers"><span class="amb">${o.pais||'General'}</span><span class="tx">${o.texto}</span>${esAdmin()?`<button class="covdel" onclick="eliminarObjPers(${o.id})">✕</button>`:''}</div>`).join('')
+    :'<div class="objpers"><span class="tx dim">Sin objetivos personalizados.</span></div>';
+}
+function autoObjetivos(){
+  document.querySelectorAll('#objTabla .objin').forEach(i=>{if(i.placeholder&&i.placeholder!=='—')i.value=i.placeholder;});
+}
+function limpiarObjetivos(){document.querySelectorAll('#objTabla .objin').forEach(i=>i.value='');}
+async function guardarObjetivos(){
+  if(!esAdmin()){alert('Solo el administrador puede fijar objetivos.');return}
+  const filas=[];const vals={};
+  document.querySelectorAll('#objTabla .objin').forEach(i=>{
+    const k=i.dataset.k;(vals[k]=vals[k]||{})[i.dataset.t]=i.value.trim();});
+  Object.keys(vals).forEach(k=>{
+    const [pais,empresa,canal]=k.split('|');const v=vals[k];
+    if(v.pub!==''||v.sku!=='')filas.push({pais,empresa,canal,
+      meta_pub:v.pub!==''?+v.pub:null,meta_sku:v.sku!==''?+v.sku:null});
+  });
+  try{
+    prog('Guardando objetivos…');
+    const del=await SB.from('objetivos_tienda').delete().neq('pais','\u0000');
+    if(del.error)throw del.error;
+    if(filas.length){const ins=await SB.from('objetivos_tienda').insert(filas);if(ins.error)throw ins.error;}
+    await cargarTodo();renderObjetivos();
+    alert(`✓ Objetivos guardados: ${filas.length} tienda(s) con meta fijada; el resto usa la propuesta automática.`);
+  }catch(e){alert(/does not exist|schema cache/i.test(e.message||'')?'⚠ Falta correr objetivos_semana.sql en Supabase.':'No se pudo guardar: '+(e.message||e));}
+  finally{prog(null);}
+}
+async function agregarObjPers(){
+  if(!esAdmin())return;
+  const pais=document.getElementById('objPais').value,texto=document.getElementById('objTexto').value.trim();
+  if(!texto){alert('Escribe el objetivo.');return}
+  try{const {error}=await SB.from('objetivos_pers').insert({pais,texto});if(error)throw error;
+    document.getElementById('objTexto').value='';await cargarTodo();renderObjetivos();
+  }catch(e){alert(/does not exist|schema cache/i.test(e.message||'')?'⚠ Falta correr objetivos_semana.sql en Supabase.':'No se pudo agregar: '+(e.message||e));}
+}
+async function eliminarObjPers(id){
+  if(!esAdmin())return;
+  try{const {error}=await SB.from('objetivos_pers').delete().eq('id',id);if(error)throw error;
+    await cargarTodo();renderObjetivos();
+  }catch(e){alert('No se pudo quitar: '+(e.message||e));}
+}
 
 // ===== Pestaña Validación por título =====
 async function cargarValidacion(force){
@@ -1349,15 +1483,17 @@ async function cargarValidacion(force){
   }
   const tp=VALID_CACHE.reduce((s,r)=>s+ +r.publicadas,0),tc=VALID_CACHE.reduce((s,r)=>s+ +r.cumplen,0),tf=VALID_CACHE.reduce((s,r)=>s+ +r.fuera,0);
   st.className='covstat ok';
-  st.innerHTML=`✓ ${fmt(tp)} títulos publicados en la red — <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de matriz.`;
-  let h='<table class="mat" style="min-width:820px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Publicadas</th><th>Cumplen</th><th>% Cumpl.</th><th>Fuera de matriz</th><th>Faltantes por publicar</th><th>Detalle</th></tr></thead><tbody>';
+  st.innerHTML=`✓ Todos los canales de la cobertura. ${fmt(tp)} títulos publicados — <b>${fmt(tc)}</b> cumplen · <b>${fmt(tf)}</b> fuera de matriz. Las tiendas «sin títulos» aún no han subido publicaciones con título.`;
+  let h='<table class="mat" style="min-width:820px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Publicadas</th><th>Cumplen</th><th>% Cumpl.</th><th>Fuera de matriz</th><th>Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
   let pais0=null;
   VALID_CACHE.forEach((r,i)=>{
     if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="9">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
     const pc=r.publicadas>0?Math.round(r.cumplen/r.publicadas*100):null;
-    h+=`<tr><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
-      <td>${fmt(r.publicadas)}</td><td>${fmt(r.cumplen)}</td><td>${pill(pc)}</td>
-      <td>${+r.fuera?`<b style="color:var(--rojo)">${fmt(r.fuera)}</b>`:'0'}</td>
+    const sinTit=+r.publicadas===0;
+    h+=`<tr${sinTit?' style="opacity:.75"':''}><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
+      <td>${sinTit?'<span class="na" title="Sin títulos cargados: sube las publicaciones de esta tienda con columna de título">0 <small>sin títulos</small></span>':fmt(r.publicadas)}</td>
+      <td>${sinTit?'—':fmt(r.cumplen)}</td><td>${sinTit?pill(null):pill(pc)}</td>
+      <td>${sinTit?'—':(+r.fuera?`<b style="color:var(--rojo)">${fmt(r.fuera)}</b>`:'0')}</td>
       <td>${+r.faltantes?`<b style="color:var(--amar,#B7791F)">${fmt(r.faltantes)}</b>`:'0'}</td>
       <td><button class="btn-cov ghost" style="padding:4px 10px;font-size:12px" onclick="descargarValidacion(${i})">⬇ Excel</button></td></tr>`;
   });
@@ -1374,7 +1510,7 @@ async function descargarValidacion(i){
     const cumplen=(data&&data.cumplen)||[],fuera=(data&&data.fuera)||[],falt=(data&&data.faltantes)||[];
     const h0=[['Titulo publicado','SKU','Titulo en matriz']].concat(cumplen.map(x=>[x.titulo,x.sku||'',x.titulo_matriz||'']));
     const h1=[['Titulo publicado','SKU']].concat(fuera.map(x=>[x.titulo,x.sku||'']));
-    const h2=[['Titulo en matriz','SKU','Tiene Precio']].concat(falt.map(x=>[x.titulo,x.sku||'',x.tiene_precio||'']));
+    const h2=[['Titulo faltante por publicar','SKU (unico por familia)','Tiene Precio']].concat(falt.map(x=>[x.titulo,x.sku||'',x.tiene_precio||'']));
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h0),'Cumplen');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Fuera de matriz');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Faltantes por publicar');
@@ -1414,6 +1550,12 @@ async function cargarTodo(){
   COBROWS=cob.data||[]; PUBROWS=pub.data||[];
   // Validación por título (para columna/resumen de "fuera de política"). Silencioso si aún no existe.
   try{const v=await SB.rpc('validar_resumen');if(!v.error){VALID_CACHE=v.data||[];VALID_MAP={};VALID_CACHE.forEach(r=>VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal]=r);}}catch(e){}
+  // Objetivos semanales (pestaña Objetivos + PDF). Silencioso si las tablas no existen.
+  try{
+    const [ot,op]=await Promise.all([SB.from('objetivos_tienda').select('*'),SB.from('objetivos_pers').select('*').order('id')]);
+    OBJ_MAP={};if(!ot.error)(ot.data||[]).forEach(o=>OBJ_MAP[o.pais+'|'+o.empresa+'|'+o.canal]=o);
+    CUSTOM_OBJS=op.error?[]:(op.data||[]);
+  }catch(e){}
   rebuildDATA(); render();
 }
 // Upsert tolerante: si la columna 'lineas' aún no existe en la base, guarda sin ella y avisa.
