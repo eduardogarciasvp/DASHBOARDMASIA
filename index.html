@@ -1320,18 +1320,14 @@ function buildReporte(){
   H+=`<tr style="font-weight:700;border-top:2px solid var(--azul)"><td class="l">TOTAL RED</td>
       <td>${fmt(tg.skuU)}</td><td>${fmt(tg.skuMzU)}</td><td>${pp(tg.pSKU)}</td>
       <td>${fmt(tg.pub)}</td><td>${fmt(tg.pubM)}</td><td>${pp(tg.pPUB)}</td><td>${all.length}</td></tr></tbody></table>`;
-  // Objetivos de la red: tiendas con mayor brecha, con meta y fecha
-  const objs=all.map(r=>({r,o:objetivoTienda(r)})).filter(x=>(x.o.P&&x.o.P.b>0)||(x.o.S&&x.o.S.b>0)).sort((a,b)=>b.o.b-a.o.b);
-  const metaRed=objs.reduce((s,x)=>s+((x.o.P&&x.o.P.metas.length)?(x.o.P.metas[0].v-x.r.pub):0),0);
-  H+=`<div class="rep-sub">Objetivos de la red · próxima revisión ${fFec(w1)}</div><ul class="acc">`;
-  if(objs.length){
-    H+=`<li class="b"><b>Meta global de la semana:</b> publicar <b>+${fmt(metaRed)}</b> publicaciones netas en la red (de ${fmt(tg.pub)} a ${fmt(tg.pub+metaRed)}) antes del ${fFec(w1)}.</li>`;
-    objs.slice(0,8).forEach(x=>{
-      H+=`<li class="${x.o.tipo==='cont'?'r':'y'}"><b>${x.r.pais} · ${x.r.empresa} · ${x.r.canal}</b> — ${objTxt(x.r,x.o)}</li>`;});
-    if(objs.length>8)H+=`<li class="y">+${objs.length-8} tiendas más con brecha — detalle en las páginas por país.</li>`;
-  } else H+='<li class="g">Sin brechas de publicaciones o falta cargar la matriz para medir.</li>';
-  CUSTOM_OBJS.filter(o=>!o.pais).forEach(o=>H+=`<li class="b"><b>Objetivo adicional:</b> ${o.texto}</li>`);
-  H+=`</ul><div class="rep-foot"><span>Masia Group · Gestión E-commerce</span><span>Confidencial · uso interno</span></div></div>`;
+  // Página 1: sin objetivos de tiendas — solo objetivos personalizados de ámbito General
+  const objGen=CUSTOM_OBJS.filter(o=>!o.pais);
+  if(objGen.length){
+    H+=`<div class="rep-sub">Objetivos de la semana</div><ul class="acc">`;
+    objGen.forEach(o=>H+=`<li class="b">${o.texto}</li>`);
+    H+='</ul>';
+  }
+  H+=`<div class="rep-foot"><span>Masia Group · Gestión E-commerce</span><span>Confidencial · uso interno</span></div></div>`;
   // ---------- Página por país ----------
   ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).forEach(p=>{
     const rs=all.filter(r=>r.pais===p);const t=totales(rs);
@@ -1347,30 +1343,13 @@ function buildReporte(){
     H+='<div class="rep-sub">Detalle por plataforma</div>'+repTabla(rs);
     // Objetivos por tienda del país
     const po=rs.map(r=>({r,o:objetivoTienda(r)}));
-    const conMeta=po.filter(x=>(x.o.P&&x.o.P.b>0)||(x.o.S&&x.o.S.b>0)).sort((a,b)=>b.o.b-a.o.b);
+    const conMeta=po.filter(x=>!x.o.excluido&&((x.o.P&&x.o.P.b>0)||(x.o.S&&x.o.S.b>0))).sort((a,b)=>b.o.b-a.o.b);
     H+=`<div class="rep-sub">Objetivos · revisión ${fFec(w1)}${conMeta.some(x=>x.o.P&&x.o.P.metas.length>1)?' y '+fFec(w2):''}</div><ul class="acc">`;
     if(conMeta.length)conMeta.forEach(x=>{
       H+=`<li class="${x.o.tipo==='cont'?'r':'y'}"><b>${x.r.empresa} · ${x.r.canal}</b> — ${objTxt(x.r,x.o)}</li>`;});
     else H+='<li class="g">Todos los canales del país cumplen su matriz (o falta cargar la matriz).</li>';
     CUSTOM_OBJS.filter(o=>o.pais===p).forEach(o=>H+=`<li class="b"><b>Objetivo adicional:</b> ${o.texto}</li>`);
     H+='</ul>';
-    // Líneas de producto a priorizar (donde menos se ha publicado)
-    let bloq='';let notas=new Set();
-    conMeta.forEach(x=>{
-      const lc=lineasCriticas(x.r,3);
-      if(lc.falta==='pub')notas.add(`${x.r.empresa} · ${x.r.canal}: vuelve a subir sus publicaciones para ver el desglose por línea.`);
-      if(!lc.items.length)return;
-      const det=lc.items.map(i=>{
-        const metaL=Math.min(i.gap,Math.max(5,Math.round(x.o.paso*i.gap/x.o.b)));
-        return `<b>${i.l}</b> (hoy ${fmt(i.hoy)}/${fmt(i.obj)} · +${fmt(metaL)} esta semana)`;
-      }).join(' · ');
-      bloq+=`<li class="y"><b>${x.r.empresa} · ${x.r.canal}</b> — priorizar líneas: ${det}.</li>`;
-    });
-    if(bloq||notas.size){
-      H+='<div class="rep-sub">Líneas de producto a priorizar</div><ul class="acc">'+bloq;
-      notas.forEach(n=>H+=`<li class="b">${n}</li>`);
-      H+='</ul>';
-    }
     // Fortalezas
     const fort=rs.filter(r=>pctPUB(r)!=null&&pctPUB(r)>=90);
     if(fort.length){H+='<div class="rep-sub">Fortalezas a sostener</div><ul class="acc">';
@@ -1460,6 +1439,8 @@ async function guardarObjetivos(){
     }
     await cargarTodo();renderObjetivos();
     const nExc=filas.filter(f=>f.excluir).length;
+    const nExcDB=Object.values(OBJ_MAP).filter(o=>o.excluir).length;
+    if(nExc>0&&nExcDB<nExc){alert('⚠ Las exclusiones NO quedaron guardadas en la base.\nCorre en Supabase:\nalter table public.objetivos_tienda add column if not exists excluir boolean not null default false;');return}
     alert(`✓ Objetivos guardados: ${filas.length-nExc} tienda(s) con meta fijada · ${nExc} excluida(s) del PDF; el resto usa la propuesta automática.`);
   }catch(e){alert(/does not exist|schema cache/i.test(e.message||'')?'⚠ Falta correr objetivos_semana.sql en Supabase.':'No se pudo guardar: '+(e.message||e));}
   finally{prog(null);}
