@@ -325,7 +325,7 @@
     <div class="sec">
       <div class="sec-h">
         <h2>Cumplimiento por país</h2>
-        <span class="hint">Barra sólida = % SKU · barra fina = % Publicaciones</span>
+        <span class="hint">% de publicaciones que cumplen la política vs la matriz (detalle por SKU en la tabla)</span>
       </div>
       <div class="pais-grid" id="paises"></div>
     </div>
@@ -561,10 +561,10 @@ const COLS=[
   {key:'pais',lab:'País',tipo:'cat',align:'l'},
   {key:'canal',lab:'Canal',tipo:'cat',align:'l'},
   {key:'empresa',lab:'Empresa',tipo:'cat',align:'l'},
-  {key:'skuPb',lab:'SKUs Pub.',sub:'publicados',tipo:'num'},
+  {key:'skuPb',lab:'SKUs Pub.',sub:'cumplen política',tipo:'num'},
   {key:'skuMz',lab:'SKUs Matriz',sub:'deber ser',tipo:'num'},
   {key:'pctSKU',lab:'% SKU',sub:'cobertura',tipo:'num'},
-  {key:'pub',lab:'Publicaciones',sub:'P/N OEM',tipo:'num'},
+  {key:'pub',lab:'Publicaciones',sub:'cumplen política',tipo:'num'},
   {key:'pubMz',lab:'Pub. Matriz',sub:'deber ser',tipo:'num'},
   {key:'pctPUB',lab:'% Pub.',sub:'profundidad',tipo:'num'},
   {key:'fuera',lab:'Fuera política',sub:'≠ matriz',tipo:'num'},
@@ -624,10 +624,10 @@ function renderKPIs(){
       <div class="k-sub">${fmt(t.skuU)} SKUs únicos de ${fmt(t.skuMzU)} en matriz</div></div>
     <div class="kpi ${pc}"><div class="k-lab">Cumplimiento Publicaciones</div>
       <div class="k-val">${t.pPUB==null?'—':t.pPUB+'<small>%</small>'}</div>
-      <div class="k-sub">${fmt(t.pub)} publicadas de ${fmt(t.pubM)} posibles</div></div>
+      <div class="k-sub">${fmt(t.pub)} que cumplen política de ${fmt(t.pubM)} posibles</div></div>
     <div class="kpi k-amb"><div class="k-lab">Publicaciones activas</div>
       <div class="k-val">${fmt(t.pub)}</div>
-      <div class="k-sub">listings por número de parte OEM</div></div>
+      <div class="k-sub">listings que cumplen la política</div></div>
     ${kFuera}`;
 }
 function renderChips(){
@@ -651,14 +651,13 @@ function renderPaises(){
   let h='';
   paises.forEach(p=>{
     const t=totales(rows.filter(r=>r.pais===p));
-    const c=t.pSKU==null?'var(--neutro)':col(t.pSKU);
+    const c=t.pPUB==null?'var(--neutro)':col(t.pPUB);
     h+=`<div class="pais-card">
       <div class="pais-top"><div class="nm"><span class="flag">${FLAGS[p]||''}</span>${p}</div>
-        <div class="pais-pct" style="color:${c}">${t.pSKU==null?'—':t.pSKU+'%'}</div></div>
-      <div class="bar"><span style="width:${Math.min(100,t.pSKU||0)}%;background:${c}"></span></div>
-      <div class="bar s2"><span style="width:${Math.min(100,t.pPUB||0)}%;background:var(--ambar)"></span></div>
-      <div class="pais-meta"><span><b>${fmt(t.skuU)}</b>/${fmt(t.skuMzU)} SKU · Pub <b>${t.pPUB==null?'—':t.pPUB+'%'}</b></span>
-        <span><b>${fmt(t.pub)}</b> publicaciones</span></div>
+        <div class="pais-pct" style="color:${c}">${t.pPUB==null?'—':t.pPUB+'%'}</div></div>
+      <div class="bar"><span style="width:${Math.min(100,t.pPUB||0)}%;background:${c}"></span></div>
+      <div class="pais-meta"><span><b>${fmt(t.pub)}</b>/${fmt(t.pubM)} publicaciones</span>
+        <span><b>${fmt(t.skuU)}</b> SKUs únicos</span></div>
     </div>`;
   });
   document.getElementById('paises').innerHTML=h||'<div class="empty">Sin datos para el filtro seleccionado.</div>';
@@ -709,7 +708,7 @@ function renderTabla(){
     <td>${hayVal?`<b style="color:var(--rojo)">${fmt(tf)}</b>`:'—'}</td></tr>`;
   document.getElementById('tbody').innerHTML=h;
   document.getElementById('totnote').innerHTML=
-    `Los SKUs del total son <b>productos únicos</b>: por empresa y país se cuenta el catálogo publicado más amplio entre plataformas, no la suma. Las publicaciones sí se suman. <b>Fuera política</b> = títulos publicados que no coinciden con la matriz.`;
+    `Los SKUs del total son <b>productos únicos</b>: por empresa y país se cuenta el catálogo publicado más amplio entre plataformas, no la suma. Las publicaciones sí se suman. <b>Publicaciones y SKUs cuentan solo lo que cumple la política</b> (título válido contra la matriz); lo demás va en <b>Fuera política</b>. Tiendas sin títulos validados muestran su total sin filtrar.`;
 }
 
 // ===== Panel de filtro =====
@@ -1527,7 +1526,16 @@ function rebuildDATA(){
   const fila=(pais,empresa,canal)=>{
     const a=MATRIZ_AGG[empresa]||{pub:0,sku:0};
     const r=pm[pais+'|'+empresa+'|'+canal]||{skuPb:0,pub:0};
-    return {pais,canal,empresa,smE:a.sku,smA:a.sku,skuPb:r.skuPb,pmE:a.pub,pmA:a.pub,pub:r.pub};
+    // Regla de cumplimiento: solo cuentan las publicaciones que CUMPLEN la política
+    // (título válido contra la matriz). Las fuera de política salen del conteo y
+    // solo aparecen en su columna. Tiendas sin títulos validados: total sin filtrar.
+    let pub=r.pub, skuPb=r.skuPb;
+    const v=VALID_MAP[pais+'|'+empresa+'|'+canal];
+    if(v&&+v.publicadas>0){
+      pub=+v.cumplen;
+      if(v.cumplen_sku!=null)skuPb=+v.cumplen_sku;
+    }
+    return {pais,canal,empresa,smE:a.sku,smA:a.sku,skuPb,pmE:a.pub,pmA:a.pub,pub,pubTot:r.pub};
   };
   const seen=new Set(), out=[];
   COBROWS.forEach(c=>{seen.add(key(c));out.push(fila(c.pais,c.empresa,c.canal));});
