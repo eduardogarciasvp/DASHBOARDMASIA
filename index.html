@@ -1202,9 +1202,16 @@ async function agregarCobertura(){
 // Borra SOLO los datos cargados de una tienda (conteos + títulos publicados).
 // La matriz y la fila de cobertura quedan intactas. Disponible para todos los usuarios.
 async function limpiarDatosTienda(pais,empresa,canal){
-  if(!confirm(`¿Borrar los datos cargados de:\n${empresa} · ${canal} · ${pais}?\n\nSe elimina lo publicado (conteos y títulos). La matriz y la cobertura NO se tocan. Podrás volver a subir el Excel cuando quieras.`))return;
+  if(!confirm(`¿Borrar los datos cargados de:\n${empresa} · ${canal} · ${pais}?\n\nSe elimina lo publicado (conteos y títulos). La matriz NO se toca y la tienda queda visible en cero.`))return;
   try{
     prog('Borrando datos de la tienda…');
+    // Conservar la fila: si la tienda no estaba en cobertura (existía solo por sus datos),
+    // se fija primero para que no desaparezca del panel al limpiar.
+    const enCob=COBROWS.some(c=>c.pais===pais&&c.empresa===empresa&&c.canal===canal);
+    if(!enCob){
+      const up=await SB.from('cobertura').upsert([{pais,empresa,canal}],{onConflict:'pais,empresa,canal',ignoreDuplicates:true});
+      if(up.error&&!esAdmin())alert('Nota: la tienda no estaba en Cobertura y solo el admin puede fijarla; al limpiar, la fila dejará de verse hasta que el admin la agregue.');
+    }
     const [a,b]=await Promise.all([
       SB.from('publicaciones').delete().match({pais,empresa,canal}),
       SB.from('pub_titulos').delete().match({pais,empresa,canal})
