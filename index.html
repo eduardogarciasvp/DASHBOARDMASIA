@@ -1164,8 +1164,8 @@ function renderCobertura(){
   if(es){const cur=es.value;es.innerHTML=empresasDisp().map(v=>`<option ${v===cur?'selected':''}>${v}</option>`).join('');}
   // tabla
   const admin=(typeof esAdmin==='function')&&esAdmin();
-  const nc=admin?6:5;
-  let h='<table class="mat" style="min-width:680px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Pub. Matriz</th><th>SKUs Matriz</th>'+(admin?'<th>Quitar</th>':'')+'</tr></thead><tbody>';
+  const nc=admin?7:6;
+  let h='<table class="mat" style="min-width:760px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Pub. Matriz</th><th>SKUs Matriz</th><th>Datos cargados</th>'+(admin?'<th>Quitar</th>':'')+'</tr></thead><tbody>';
   const rows=DATA.slice().sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)||a.empresa.localeCompare(b.empresa)||a.canal.localeCompare(b.canal));
   if(!rows.length)h+=`<tr><td colspan="${nc}" class="empty">Sin filas de cobertura.${admin?' Agrega País · Empresa · Canal abajo.':''}</td></tr>`;
   let pais0=null;
@@ -1174,9 +1174,13 @@ function renderCobertura(){
     if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="${nc}">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
     const pm=a?fmt(a.pub):'<span class="na">—</span>';
     const sm=a?fmt(a.sku):'<span class="na" title="Empresa sin coincidencia en la matriz">—</span>';
+    const tot=(r.pubTot!=null?r.pubTot:r.pub)||0;
+    const datos=tot>0
+      ?`${fmt(tot)} pub. <button class="covdel" title="Borrar SOLO los datos cargados de esta tienda (la matriz y la cobertura quedan)" style="width:auto;padding:0 8px;font-size:12px" onclick="limpiarDatosTienda('${r.pais}','${r.empresa}','${r.canal}')">🧹 Limpiar</button>`
+      :'<span class="na">sin datos</span>';
     h+=`<tr><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
-      <td>${pm}</td><td>${sm}</td>`+
-      (admin?`<td><button class="covdel" onclick="eliminarCobertura('${r.pais}','${r.empresa}','${r.canal}')">✕</button></td>`:'')+`</tr>`;
+      <td>${pm}</td><td>${sm}</td><td>${datos}</td>`+
+      (admin?`<td><button class="covdel" title="Quitar la tienda de la cobertura (y sus datos)" onclick="eliminarCobertura('${r.pais}','${r.empresa}','${r.canal}')">✕</button></td>`:'')+`</tr>`;
   });
   h+='</tbody></table>';
   ct.innerHTML=h;
@@ -1195,14 +1199,34 @@ async function agregarCobertura(){
     await cargarTodo();
   }catch(e){alert('No se pudo agregar: '+(e.message||e));}
 }
+// Borra SOLO los datos cargados de una tienda (conteos + títulos publicados).
+// La matriz y la fila de cobertura quedan intactas. Disponible para todos los usuarios.
+async function limpiarDatosTienda(pais,empresa,canal){
+  if(!confirm(`¿Borrar los datos cargados de:\n${empresa} · ${canal} · ${pais}?\n\nSe elimina lo publicado (conteos y títulos). La matriz y la cobertura NO se tocan. Podrás volver a subir el Excel cuando quieras.`))return;
+  try{
+    prog('Borrando datos de la tienda…');
+    const [a,b]=await Promise.all([
+      SB.from('publicaciones').delete().match({pais,empresa,canal}),
+      SB.from('pub_titulos').delete().match({pais,empresa,canal})
+    ]);
+    if(a.error)throw a.error;
+    if(b.error&&!/does not exist|schema cache/i.test(b.error.message||''))throw b.error;
+    VALID_CACHE=null;
+    await cargarTodo();
+  }catch(e){alert('No se pudo borrar: '+(e.message||e));}
+  finally{prog(null);}
+}
 async function eliminarCobertura(pais,empresa,canal){
   if(!esAdmin())return;
   try{
-    const [c,p]=await Promise.all([
+    const [c,p,t]=await Promise.all([
       SB.from('cobertura').delete().match({pais,empresa,canal}),
-      SB.from('publicaciones').delete().match({pais,empresa,canal})
+      SB.from('publicaciones').delete().match({pais,empresa,canal}),
+      SB.from('pub_titulos').delete().match({pais,empresa,canal})
     ]);
     if(c.error)throw c.error; if(p.error)throw p.error;
+    if(t.error&&!/does not exist|schema cache/i.test(t.error.message||''))throw t.error;
+    VALID_CACHE=null;
     await cargarTodo();
   }catch(e){alert('No se pudo quitar: '+(e.message||e));}
 }
