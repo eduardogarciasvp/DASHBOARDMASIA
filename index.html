@@ -91,7 +91,9 @@
   .pais-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gris);margin-top:8px}
   .pais-meta b{color:var(--tinta);font-weight:600}
 
-  .tbl-wrap{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;overflow:auto}
+  .tbl-wrap{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;overflow:auto;max-height:74vh}
+  thead th{position:sticky;top:0;z-index:6}
+  tr.grp-row td{position:sticky;top:34px;z-index:5;background:var(--papel)}
   table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:920px}
   thead th{background:var(--azul);color:#fff;font-weight:600;font-size:11px;text-transform:uppercase;
     letter-spacing:.03em;padding:9px 11px;text-align:right;white-space:nowrap;vertical-align:bottom}
@@ -266,6 +268,8 @@
     @page{size:A4;margin:11mm}
     .head-actions,.dropzone,.tabs,.matsel,.chips,.fpanel,.modal-bg{display:none!important}
     body{background:#fff}
+    .tbl-wrap{max-height:none!important;overflow:visible!important}
+    thead th,tr.grp-row td{position:static!important}
     body.modo-reporte>*:not(#reporte){display:none!important}
     body.modo-reporte #reporte{display:block!important}
     body:not(.modo-reporte) #reporte{display:none!important}
@@ -425,7 +429,7 @@
       <div class="note">
         <b>Cómo funciona:</b> la comparación es exacta por título, ignorando mayúsculas y espacios repetidos (y unificando las variantes de Sullivan/Palatek). Acepta <b>todos los idiomas</b> que traiga la matriz (columnas u hojas Titulo EN / ES / PT): los faltantes se cuentan por <b>producto</b>, no por idioma.
         Un título como <i>"1613-6105-00 Filtro de Aceite Atlas Copco"</i> <b>no cumple</b> si la matriz dice <i>"…Compatible con Atlas Copco"</i> — aparecerá en <b>Fuera de matriz</b> y su versión correcta en <b>Faltantes</b>.
-        El botón <b>⬇ Excel</b> descarga tres hojas: <b>Cumplen</b> (correctas, para control), <b>Fuera de matriz</b> y <b>Faltantes por publicar</b>, con Título, SKU y Tiene Precio.
+        <b>Las cifras cuadran:</b> Objetivo = Cumplen + Faltantes · Publicadas = Cumplen + Fuera + Duplicados. <b>Cumplen</b> son publicaciones de la matriz realmente cubiertas: si el mismo título se publica 3 veces, cubre 1 y las otras 2 van a <b>Duplicados</b>.<br>El botón <b>⬇ Excel</b> descarga cuatro hojas: <b>Cumplen</b> (correctas, para control), <b>Fuera de matriz</b>, <b>Duplicados</b> (títulos repetidos, con el SKU que sí se contó) y <b>Faltantes por publicar</b>.
       </div>
     </div>
   </div>
@@ -1513,20 +1517,22 @@ async function cargarValidacion(force){
   }
   const tp=VALID_CACHE.reduce((s,r)=>s+ +r.publicadas,0),tc=VALID_CACHE.reduce((s,r)=>s+ +r.cumplen,0),tf=VALID_CACHE.reduce((s,r)=>s+ +r.fuera,0);
   st.className='covstat ok';
-  const tobj=VALID_CACHE.reduce((s,r)=>s+((MATRIZ_AGG[r.empresa]||{}).pub||0),0);
+  const tobj=VALID_CACHE.reduce((s,r)=>s+(r.objetivo!=null?+r.objetivo:((MATRIZ_AGG[r.empresa]||{}).pub||0)),0);
   st.innerHTML=`✓ Todos los canales de la cobertura. Objetivo de la red: <b>${fmt(tobj)}</b> publicaciones · hoy <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de política (de ${fmt(tp)} títulos cargados). Las tiendas «sin títulos» aún no han subido publicaciones con título.`;
-  let h='<table class="mat" style="min-width:900px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th title="Publicaciones que debe tener según la matriz (con precio)">Pub. objetivo</th><th>Publicadas</th><th>Cumplen</th><th>% vs objetivo</th><th>Fuera de matriz</th><th>Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
+  let h='<table class="mat" style="min-width:980px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th title="Publicaciones que debe tener según la matriz (con precio)">Pub. objetivo</th><th title="Listings cargados de esta tienda">Publicadas</th><th title="Publicaciones de la matriz efectivamente cubiertas (sin doble conteo)">Cumplen</th><th>% vs objetivo</th><th title="Listings cuyo título no está en la matriz">Fuera de matriz</th><th title="Listings que repiten un título ya contado">Duplicados</th><th title="Objetivo − Cumplen">Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
   let pais0=null;
   VALID_CACHE.forEach((r,i)=>{
-    if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="10">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
-    const obj=(MATRIZ_AGG[r.empresa]||{}).pub||0;
+    if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="11">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
+    const obj=r.objetivo!=null?+r.objetivo:((MATRIZ_AGG[r.empresa]||{}).pub||0);
     const pc=obj>0?Math.round(+r.cumplen/obj*100):null;   // cumplen vs objetivo de la matriz
+    const dup=r.duplicados!=null?+r.duplicados:null;
     const sinTit=+r.publicadas===0;
     h+=`<tr${sinTit?' style="opacity:.75"':''}><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
       <td><b>${obj?fmt(obj):'<span class="na">—</span>'}</b></td>
       <td>${sinTit?'<span class="na" title="Sin títulos cargados: sube las publicaciones de esta tienda con columna de título">0 <small>sin títulos</small></span>':fmt(r.publicadas)}</td>
       <td>${sinTit?'—':fmt(r.cumplen)}</td><td>${sinTit?pill(null):pill(pc)}</td>
       <td>${sinTit?'—':(+r.fuera?`<b style="color:var(--rojo)">${fmt(r.fuera)}</b>`:'0')}</td>
+      <td>${sinTit||dup==null?'—':(dup?`<b style="color:var(--amar,#B7791F)">${fmt(dup)}</b>`:'0')}</td>
       <td>${+r.faltantes?`<b style="color:var(--amar,#B7791F)">${fmt(r.faltantes)}</b>`:'0'}</td>
       <td><button class="btn-cov ghost" style="padding:4px 10px;font-size:12px" onclick="descargarValidacion(${i})">⬇ Excel</button></td></tr>`;
   });
@@ -1540,12 +1546,14 @@ async function descargarValidacion(i){
     const {data,error}=await SB.rpc('validar_detalle',{p_pais:r.pais,p_empresa:r.empresa,p_canal:r.canal});
     if(error)throw error;
     const wb=XLSX.utils.book_new();
-    const cumplen=(data&&data.cumplen)||[],fuera=(data&&data.fuera)||[],falt=(data&&data.faltantes)||[];
+    const cumplen=(data&&data.cumplen)||[],fuera=(data&&data.fuera)||[],falt=(data&&data.faltantes)||[],dupl=(data&&data.duplicados)||[];
     const h0=[['Titulo publicado','SKU','Titulo en matriz']].concat(cumplen.map(x=>[x.titulo,x.sku||'',x.titulo_matriz||'']));
     const h1=[['Titulo publicado','SKU']].concat(fuera.map(x=>[x.titulo,x.sku||'']));
+    const h3=[['Titulo repetido','SKU','Ya contado en el SKU']].concat(dupl.map(x=>[x.titulo,x.sku||'',x.duplica_a||'']));
     const h2=[['Titulo faltante por publicar','SKU (unico por familia)','Tiene Precio']].concat(falt.map(x=>[x.titulo,x.sku||'',x.tiene_precio||'']));
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h0),'Cumplen');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h1),'Fuera de matriz');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h3),'Duplicados');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(h2),'Faltantes por publicar');
     const f=new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb,`Validacion_${r.pais}_${r.empresa}_${r.canal}_${f}.xlsx`.replace(/\s+/g,'_'));
