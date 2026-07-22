@@ -682,7 +682,7 @@ function renderTabla(){
   const rows=filas();let h='';
   rows.forEach(r=>{
     const f=fueraPol(r);
-    const celF=f==null?'<span class="na" title="Falta validación por título (carga matriz + publicaciones con título)">—</span>'
+    const celF=f==null?'<span class="na" title="Esta tienda no tiene títulos validados: vuelve a subir su Excel de publicaciones incluyendo la columna TITULO">sin validar</span>'
       :(f>0?`<b style="color:var(--rojo)">${fmt(f)}</b>${pctFuera(r)!=null?` <span class="dim">(${pctFuera(r)}%)</span>`:''}`:'0');
     h+=`<tr>
       <td class="l"><span class="pais-cell">${FLAGS[r.pais]||''} ${r.pais}</span></td>
@@ -707,8 +707,10 @@ function renderTabla(){
     <td>${fmt(t.pub)}</td><td>${fmt(t.pubM)}</td><td>${pill(t.pPUB)}</td>
     <td>${hayVal?`<b style="color:var(--rojo)">${fmt(tf)}</b>`:'—'}</td></tr>`;
   document.getElementById('tbody').innerHTML=h;
+  const sinVal=rows.filter(r=>fueraPol(r)==null&&r.pub>0);
+  const aviso=sinVal.length?`<br><b style="color:var(--rojo)">⚠ ${sinVal.length} tienda(s) sin validar</b> (${sinVal.slice(0,3).map(r=>r.empresa+'·'+r.canal).join(', ')}${sinVal.length>3?`, +${sinVal.length-3}`:''}): sus publicaciones se cargaron sin la columna <b>TITULO</b> o antes de activar la validación. Vuelve a subir su Excel con título para medir la política.`:'';
   document.getElementById('totnote').innerHTML=
-    `Los SKUs del total son <b>productos únicos</b>: por empresa y país se cuenta el catálogo publicado más amplio entre plataformas, no la suma. Las publicaciones sí se suman. <b>Publicaciones y SKUs cuentan solo lo que cumple la política</b> (título válido contra la matriz); lo demás va en <b>Fuera política</b>. Tiendas sin títulos validados muestran su total sin filtrar.`;
+    `Los SKUs del total son <b>productos únicos</b>: por empresa y país se cuenta el catálogo publicado más amplio entre plataformas, no la suma. Las publicaciones sí se suman. <b>Publicaciones y SKUs cuentan solo lo que cumple la política</b> (título válido contra la matriz); lo demás va en <b>Fuera política</b>.${aviso}`;
 }
 
 // ===== Panel de filtro =====
@@ -1503,20 +1505,25 @@ async function cargarValidacion(force){
     return;
   }
   VALID_CACHE=data||[];
+  VALID_MAP={};VALID_CACHE.forEach(x=>VALID_MAP[x.pais+'|'+x.empresa+'|'+x.canal]=x);
+  rebuildDATA();renderKPIs();renderPaises();renderTabla();  // refresca Detalle por plataforma
   if(!VALID_CACHE.length){
     st.innerHTML='Sin datos de títulos aún. El admin debe <b>recargar la matriz</b> y el equipo <b>resubir las publicaciones</b> (el Excel debe traer la columna de título).';
     return;
   }
   const tp=VALID_CACHE.reduce((s,r)=>s+ +r.publicadas,0),tc=VALID_CACHE.reduce((s,r)=>s+ +r.cumplen,0),tf=VALID_CACHE.reduce((s,r)=>s+ +r.fuera,0);
   st.className='covstat ok';
-  st.innerHTML=`✓ Todos los canales de la cobertura. ${fmt(tp)} títulos publicados — <b>${fmt(tc)}</b> cumplen · <b>${fmt(tf)}</b> fuera de matriz. Las tiendas «sin títulos» aún no han subido publicaciones con título.`;
-  let h='<table class="mat" style="min-width:820px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th>Publicadas</th><th>Cumplen</th><th>% Cumpl.</th><th>Fuera de matriz</th><th>Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
+  const tobj=VALID_CACHE.reduce((s,r)=>s+((MATRIZ_AGG[r.empresa]||{}).pub||0),0);
+  st.innerHTML=`✓ Todos los canales de la cobertura. Objetivo de la red: <b>${fmt(tobj)}</b> publicaciones · hoy <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de política (de ${fmt(tp)} títulos cargados). Las tiendas «sin títulos» aún no han subido publicaciones con título.`;
+  let h='<table class="mat" style="min-width:900px"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th title="Publicaciones que debe tener según la matriz (con precio)">Pub. objetivo</th><th>Publicadas</th><th>Cumplen</th><th>% vs objetivo</th><th>Fuera de matriz</th><th>Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
   let pais0=null;
   VALID_CACHE.forEach((r,i)=>{
-    if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="9">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
-    const pc=r.publicadas>0?Math.round(r.cumplen/r.publicadas*100):null;
+    if(r.pais!==pais0){h+=`<tr class="grp-row"><td colspan="10">${FLAGS[r.pais]||''} ${r.pais}</td></tr>`;pais0=r.pais;}
+    const obj=(MATRIZ_AGG[r.empresa]||{}).pub||0;
+    const pc=obj>0?Math.round(+r.cumplen/obj*100):null;   // cumplen vs objetivo de la matriz
     const sinTit=+r.publicadas===0;
     h+=`<tr${sinTit?' style="opacity:.75"':''}><td class="l">${r.pais}</td><td class="l">${r.empresa}</td><td class="l">${r.canal}</td>
+      <td><b>${obj?fmt(obj):'<span class="na">—</span>'}</b></td>
       <td>${sinTit?'<span class="na" title="Sin títulos cargados: sube las publicaciones de esta tienda con columna de título">0 <small>sin títulos</small></span>':fmt(r.publicadas)}</td>
       <td>${sinTit?'—':fmt(r.cumplen)}</td><td>${sinTit?pill(null):pill(pc)}</td>
       <td>${sinTit?'—':(+r.fuera?`<b style="color:var(--rojo)">${fmt(r.fuera)}</b>`:'0')}</td>
