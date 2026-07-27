@@ -1568,7 +1568,7 @@ function numCol(v){ // "12.500,50" / "12,500.50" / "12500" -> número
 }
 async function cargarVentas(e){
   const files=[...e.target.files]; e.target.value=''; if(!files.length)return;
-  const fact=[], obj=[]; let skip=0, filas=0;
+  const factMap={}, objMap={}; let skip=0, filas=0, fundidas=0;
   for(const file of files){
     const buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=ev=>res(new Uint8Array(ev.target.result));r.onerror=rej;r.readAsArrayBuffer(file);});
     const wb=XLSX.read(buf,{type:'array'});
@@ -1587,17 +1587,37 @@ async function cargarVentas(e){
       const pais=normPais(x[cP]),empresa=normEmpresa(x[cE]),canal=normCanal(x[cC]);
       if(!anio||!mes||!pais||!empresa||!canal){skip++;return;}
       filas++;
-      if(cF&&String(x[cF]).trim()!=='')fact.push({anio,mes,pais,empresa,canal,facturacion:numCol(x[cF])});
-      if(cO&&String(x[cO]).trim()!=='')obj.push({anio,mes,pais,empresa,canal,objetivo:numCol(x[cO]),manual:false});
+      const k=anio+'|'+mes+'|'+pais+'|'+empresa+'|'+canal;
+      // Consolidar: si el archivo trae varias filas de la misma tienda/mes, la
+      // facturación se SUMA (son parciales) y el objetivo se agrupa aparte.
+      if(cF&&String(x[cF]).trim()!==''){
+        if(factMap[k])fundidas++;
+        factMap[k]=(factMap[k]||{anio,mes,pais,empresa,canal,facturacion:0});
+        factMap[k].facturacion+=numCol(x[cF]);
+      }
+      if(cO&&String(x[cO]).trim()!==''){
+        objMap[k]=objMap[k]||{anio,mes,pais,empresa,canal,vals:[]};
+        objMap[k].vals.push(numCol(x[cO]));
+      }
     });
   }
+  const fact=Object.values(factMap);
+  // Objetivo: si el mismo valor se repite en varias filas (es el objetivo del mes
+  // escrito en cada renglón) se usa una sola vez; si son valores distintos, se suman.
+  const obj=Object.values(objMap).map(o=>{
+    const uniq=[...new Set(o.vals.filter(v=>v))];
+    const objetivo=uniq.length<=1?(uniq[0]||0):o.vals.reduce((s,v)=>s+v,0);
+    return {anio:o.anio,mes:o.mes,pais:o.pais,empresa:o.empresa,canal:o.canal,objetivo,manual:false};
+  });
   if(!fact.length&&!obj.length){alert('No se leyó ninguna fila válida.'+(skip?` (${skip} omitidas)`:''));return;}
   try{
     prog('Guardando facturación…');
     if(fact.length){const a=await SB.from('ventas').upsert(fact,{onConflict:'anio,mes,pais,empresa,canal'});if(a.error)throw a.error;}
     if(obj.length){const b=await SB.from('ventas_objetivo').upsert(obj,{onConflict:'anio,mes,pais,empresa,canal'});if(b.error)throw b.error;}
     await cargarTodo(); setPage(6); renderVentas();
-    alert(`✓ Facturación cargada: ${fmt(fact.length)} monto(s)${obj.length?` y ${fmt(obj.length)} objetivo(s)`:''}.`+(skip?` ${skip} fila(s) omitida(s).`:''));
+    alert(`✓ Facturación cargada: ${fmt(fact.length)} tienda-mes${obj.length?` y ${fmt(obj.length)} objetivo(s)`:''}.`
+      +(fundidas?`\n${fmt(fundidas)} fila(s) repetidas de la misma tienda y mes se sumaron.`:'')
+      +(skip?`\n${skip} fila(s) omitida(s) por datos incompletos.`:''));
   }catch(err){alert(/does not exist|schema cache/i.test(err.message||'')?'⚠ Falta correr ventas.sql en Supabase.':'No se pudo guardar: '+(err.message||err));}
   finally{prog(null);}
 }
