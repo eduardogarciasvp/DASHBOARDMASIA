@@ -242,6 +242,7 @@
   .objpers .tx{flex:1}
 
   .selmes{font-size:13px;border:1px solid var(--linea);border-radius:8px;padding:7px 10px;background:#fff;cursor:pointer}
+  tr.subrow td{background:#F3F6FA;font-weight:700;border-top:1px solid var(--linea)}
   .vin{width:110px;font-size:13px;border:1px solid var(--linea);border-radius:7px;padding:6px 8px;text-align:right;background:#fff}
   .vin:focus{outline:2px solid var(--ambar)}
   #reporte{display:none}
@@ -452,6 +453,9 @@
       <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
         <div class="covpg"><label>Año</label><select id="vAnio" class="selmes" onchange="renderVentas()"></select></div>
         <div class="covpg"><label>Mes</label><select id="vMes" class="selmes" onchange="renderVentas()"></select></div>
+        <div class="covpg"><label>País</label><select id="vFPais" class="selmes" onchange="renderVentas()"></select></div>
+        <div class="covpg"><label>Empresa</label><select id="vFEmp" class="selmes" onchange="renderVentas()"></select></div>
+        <div class="covpg"><label>Canal</label><select id="vFCan" class="selmes" onchange="renderVentas()"></select></div>
         <div class="solo-admin" style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
           <button class="btn-cov" onclick="guardarObjVentas()">💾 Guardar objetivos</button>
           <button class="btn-cov ghost" onclick="normalizarVentas()" title="Une empresas que quedaron duplicadas por mayúsculas (MASIA GROUP vs Masia Group)">🔧 Unir duplicados</button>
@@ -1657,42 +1661,80 @@ function renderVentas(){
   }
   if(!selM.dataset.init){selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');selM.value=(new Date().getMonth()+1);selM.dataset.init='1';}
   const anio=+selA.value||ventasAnios()[0], mes=+selM.value||1;
-  const rows=filas().length?filas():DATA;   // respeta filtros de país/canal/empresa
-  const tiendas=[...new Set(rows.map(r=>r.pais+'|'+r.empresa+'|'+r.canal))]
+  // Universo de tiendas: cobertura/datos del panel + las que tengan ventas del año
+  let tiendas=[...new Set((DATA||[]).map(r=>r.pais+'|'+r.empresa+'|'+r.canal))]
     .concat([...VENTAS,...VOBJ].filter(v=>v.anio===anio).map(v=>v.pais+'|'+v.empresa+'|'+v.canal))
     .filter((v,i,a)=>a.indexOf(v)===i);
-  const fMes={},fAnio={},oMes={},oAnio={};
-  VENTAS.forEach(v=>{if(v.anio!==anio)return;const k=v.pais+'|'+v.empresa+'|'+v.canal;fAnio[k]=(fAnio[k]||0)+ +v.facturacion;if(v.mes===mes)fMes[k]=(fMes[k]||0)+ +v.facturacion;});
-  VOBJ.forEach(v=>{if(v.anio!==anio)return;const k=v.pais+'|'+v.empresa+'|'+v.canal;oAnio[k]=(oAnio[k]||0)+ +v.objetivo;if(v.mes===mes)oMes[k]=(oMes[k]||0)+ +v.objetivo;});
+  // Filtros propios de esta pestaña
+  const partes=tiendas.map(k=>k.split('|'));
+  const opts=(sel,vals,lab)=>{
+    const el=document.getElementById(sel);
+    const prev=el.value;
+    const lista=[...new Set(vals)].filter(Boolean).sort((a,b)=>lab==='País'?(ORD_PAIS.indexOf(a)-ORD_PAIS.indexOf(b)):a.localeCompare(b));
+    el.innerHTML=`<option value="">Todos</option>`+lista.map(v=>`<option${v===prev?' selected':''}>${v}</option>`).join('');
+    if(prev&&lista.includes(prev))el.value=prev;
+    return el.value;
+  };
+  const fPais=opts('vFPais',partes.map(p=>p[0]),'País');
+  const fEmp =opts('vFEmp', partes.map(p=>p[1]),'Empresa');
+  const fCan =opts('vFCan', partes.map(p=>p[2]),'Canal');
+  tiendas=tiendas.filter(k=>{const [p,e,c]=k.split('|');
+    return (!fPais||p===fPais)&&(!fEmp||e===fEmp)&&(!fCan||c===fCan);});
+  const enFiltro=k=>tiendas.includes(k);
+  const fMes={},fAcu={},fAnio={},oMes={},oAcu={},oAnio={};
+  VENTAS.forEach(v=>{if(v.anio!==anio)return;const k=v.pais+'|'+v.empresa+'|'+v.canal;if(!enFiltro(k))return;const n=+v.facturacion||0;
+    fAnio[k]=(fAnio[k]||0)+n;                      // todo el año (los 12 meses cargados)
+    if(v.mes<=mes)fAcu[k]=(fAcu[k]||0)+n;          // acumulado enero → mes elegido
+    if(v.mes===mes)fMes[k]=(fMes[k]||0)+n;});      // solo el mes elegido
+  VOBJ.forEach(v=>{if(v.anio!==anio)return;const k=v.pais+'|'+v.empresa+'|'+v.canal;if(!enFiltro(k))return;const n=+v.objetivo||0;
+    oAnio[k]=(oAnio[k]||0)+n;
+    if(v.mes<=mes)oAcu[k]=(oAcu[k]||0)+n;
+    if(v.mes===mes)oMes[k]=(oMes[k]||0)+n;});
   // KPIs
   const sum=o=>Object.values(o).reduce((s,x)=>s+x,0);
-  const fm=sum(fMes),om=sum(oMes),fa=sum(fAnio),oa=sum(oAnio);
-  const pm=om?Math.round(fm/om*100):null, pa=oa?Math.round(fa/oa*100):null;
+  const fm=sum(fMes),om=sum(oMes),fc=sum(fAcu),oc=sum(oAcu),fa=sum(fAnio),oa=sum(oAnio);
+  const pm=om?Math.round(fm/om*100):null, pc=oc?Math.round(fc/oc*100):null, pa=oa?Math.round(fa/oa*100):null;
   const kc=p=>p==null?'is-n':'is-'+cls(p);
-  document.getElementById('vKpis').innerHTML=`
-    <div class="kpi is-blue"><div class="k-lab">Facturación ${MESES[mes-1]} ${anio}</div><div class="k-val" style="font-size:26px">${usd(fm)}</div><div class="k-sub">objetivo ${usd(om)}</div></div>
-    <div class="kpi ${kc(pm)}"><div class="k-lab">% objetivo del mes</div><div class="k-val">${pm==null?'—':pm+'<small>%</small>'}</div><div class="k-sub">${MESES[mes-1]} ${anio}</div></div>
-    <div class="kpi is-amb"><div class="k-lab">Acumulado ${anio}</div><div class="k-val" style="font-size:26px">${usd(fa)}</div><div class="k-sub">objetivo ${usd(oa)}</div></div>
-    <div class="kpi ${kc(pa)}"><div class="k-lab">% objetivo anual</div><div class="k-val">${pa==null?'—':pa+'<small>%</small>'}</div><div class="k-sub">acumulado enero–${MESES[mes-1]}</div></div>`;
+  const tarjeta=(lab,f,o,p,sub)=>`<div class="kpi ${kc(p)}">
+    <div class="k-lab">${lab}</div>
+    <div class="k-val" style="font-size:26px">${usd(f)}</div>
+    <div class="k-sub">Objetivo: ${usd(o)}${p==null?'':` <b>(${p}%)</b>`}${sub?` · ${sub}`:''}</div></div>`;
+  document.getElementById('vKpis').innerHTML=
+     tarjeta(`Facturación del mes · ${MESES[mes-1]} ${anio}`,fm,om,pm)
+    +tarjeta(`Acumulado enero–${MESES[mes-1]} ${anio}`,fc,oc,pc)
+    +tarjeta(`Total del año ${anio}`,fa,oa,pa);
   const st=document.getElementById('vStatus');
   st.className='covstat ok';
-  st.innerHTML=`Mostrando <b>${MESES[mes-1]} ${anio}</b> (mensual) y el acumulado del año. Edita las metas del mes en la columna <b>Objetivo mes</b> y pulsa Guardar.`;
+  st.innerHTML=`Mostrando <b>${MESES[mes-1]} ${anio}</b>. La tabla detalla el mes y el <b>acumulado enero–${MESES[mes-1]}</b>; la tercera tarjeta suma todo el año cargado. Edita las metas del mes en la columna <b>Objetivo mes</b> y pulsa Guardar.`;
   // Tabla
   const admin=esAdmin();
   const ord=tiendas.map(k=>{const [p,e,c]=k.split('|');return {k,p,e,c};}).sort((a,b)=>ORD_PAIS.indexOf(a.p)-ORD_PAIS.indexOf(b.p)||a.e.localeCompare(b.e)||a.c.localeCompare(b.c));
-  let h='<table class="mat" style="min-width:900px"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th>Fact. mes</th><th>Objetivo mes</th><th>% mes</th><th>Fact. año</th><th>Objetivo año</th><th>% año</th></tr></thead><tbody>';
-  let p0=null;
+  let h='<table class="mat" style="min-width:900px"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th>Fact. mes</th><th>Objetivo mes</th><th>% mes</th><th>Fact. acum.</th><th>Objetivo acum.</th><th>% acum.</th></tr></thead><tbody>';
+  let p0=null, acc=null;
+  const subFila=(p,a)=>{
+    if(!a)return '';
+    const pm1=a.om?Math.round(a.fm/a.om*100):null, pc1=a.oc?Math.round(a.fc/a.oc*100):null;
+    return `<tr class="subrow"><td class="l" colspan="2">Total ${p}</td>
+      <td>${usd(a.fm)}</td><td>${usd(a.om)}</td><td>${pill(pm1)}</td>
+      <td>${usd(a.fc)}</td><td>${usd(a.oc)}</td><td>${pill(pc1)}</td></tr>`;
+  };
   ord.forEach(o=>{
-    if(o.p!==p0){h+=`<tr class="grp-row"><td colspan="8">${FLAGS[o.p]||''} ${o.p}</td></tr>`;p0=o.p;}
-    const k=o.k, fmM=fMes[k]||0, faA=fAnio[k]||0, omM=oMes[k]||0, oaA=oAnio[k]||0;
+    if(o.p!==p0){
+      if(acc)h+=subFila(p0,acc);
+      h+=`<tr class="grp-row"><td colspan="8">${FLAGS[o.p]||''} ${o.p}</td></tr>`;
+      p0=o.p; acc={fm:0,om:0,fc:0,oc:0};
+    }
+    const k=o.k, fmM=fMes[k]||0, faA=fAcu[k]||0, omM=oMes[k]||0, oaA=oAcu[k]||0;
+    acc.fm+=fmM; acc.om+=omM; acc.fc+=faA; acc.oc+=oaA;
     const pmr=omM?Math.round(fmM/omM*100):null, par=oaA?Math.round(faA/oaA*100):null;
     const inO=admin?`<input type="number" min="0" step="1" class="vin" data-k="${k}" value="${omM||''}" placeholder="0">`:usd(omM);
     h+=`<tr><td class="l">${o.e}</td><td class="l dim">${o.c}</td>
       <td>${usd(fmM)}</td><td>${inO}</td><td>${pill(pmr)}</td>
       <td>${usd(faA)}</td><td>${usd(oaA)}</td><td>${pill(par)}</td></tr>`;
   });
+  if(acc)h+=subFila(p0,acc);
   if(!ord.length)h+='<tr><td colspan="8" class="empty">Sin datos de ventas para este año. Carga el Excel con 💵 Cargar facturación.</td></tr>';
-  h+=`<tr class="totrow"><td class="l" colspan="2">TOTAL RED (USD)</td><td>${usd(fm)}</td><td>${usd(om)}</td><td>${pill(pm)}</td><td>${usd(fa)}</td><td>${usd(oa)}</td><td>${pill(pa)}</td></tr>`;
+  h+=`<tr class="totrow"><td class="l" colspan="2">TOTAL RED (USD)</td><td>${usd(fm)}</td><td>${usd(om)}</td><td>${pill(pm)}</td><td>${usd(fc)}</td><td>${usd(oc)}</td><td>${pill(pc)}</td></tr>`;
   h+='</tbody></table>';
   ct.innerHTML=h;
 }
