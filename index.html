@@ -452,8 +452,11 @@
       <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
         <div class="covpg"><label>Año</label><select id="vAnio" class="selmes" onchange="renderVentas()"></select></div>
         <div class="covpg"><label>Mes</label><select id="vMes" class="selmes" onchange="renderVentas()"></select></div>
-        <div class="solo-admin" style="display:flex;gap:8px;margin-left:auto">
+        <div class="solo-admin" style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
           <button class="btn-cov" onclick="guardarObjVentas()">💾 Guardar objetivos</button>
+          <button class="btn-cov ghost" onclick="normalizarVentas()" title="Une empresas que quedaron duplicadas por mayúsculas (MASIA GROUP vs Masia Group)">🔧 Unir duplicados</button>
+          <button class="btn-cov ghost" onclick="limpiarVentas('objetivos')">🗑 Limpiar objetivos</button>
+          <button class="btn-cov ghost" onclick="limpiarVentas('facturacion')">🗑 Limpiar facturación</button>
         </div>
       </div>
       <div id="vKpis" class="kpis" style="margin-bottom:16px"></div>
@@ -876,7 +879,16 @@ function normCanal(v){const k=String(v==null?'':v).trim().toLowerCase();
 function normEmpresa(v){let s=String(v==null?'':v).trim();
   if(s.toUpperCase()==='XSTORE')return 'Xstore';
   if(/^masia\s+compressor/i.test(s))return 'Masia Compressors';
-  return s;
+  // Si la empresa ya existe (matriz, cobertura o datos), usar SU forma exacta:
+  // evita que "MASIA GROUP" y "Masia Group" queden como dos empresas distintas.
+  const k=s.toLowerCase();
+  const conocidas=[...new Set([...Object.keys(MATRIZ_AGG||{}),
+                               ...(COBROWS||[]).map(c=>c.empresa),
+                               ...(DATA||[]).map(d=>d.empresa)].filter(Boolean))];
+  const hit=conocidas.find(e=>String(e).toLowerCase()===k);
+  if(hit)return hit;
+  // Si no se conoce, dejarla en Formato Título (evita ALL CAPS duplicando)
+  return s.replace(/\S+/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
 }
 // Título normalizado para comparar contra la matriz:
 // minúsculas + espacios colapsados + variantes Sullivan/Palatek unificadas
@@ -1610,6 +1622,20 @@ async function cargarVentas(e){
     return {anio:o.anio,mes:o.mes,pais:o.pais,empresa:o.empresa,canal:o.canal,objetivo,manual:false};
   });
   if(!fact.length&&!obj.length){alert('No se leyó ninguna fila válida.'+(skip?` (${skip} omitidas)`:''));return;}
+  // ¿Qué hacer con las tiendas-mes que ya tienen datos?
+  const claves=[...new Set([...fact,...obj].map(r=>r.anio+'|'+r.mes+'|'+r.pais+'|'+r.empresa+'|'+r.canal))];
+  const yaHay=VENTAS.concat(VOBJ).some(v=>claves.includes(v.anio+'|'+v.mes+'|'+v.pais+'|'+v.empresa+'|'+v.canal));
+  let sumar=false;
+  if(yaHay){
+    const tiendas=[...new Set(claves.map(k=>{const p=k.split('|');return p[3]+' · '+p[4];}))];
+    const msg=`Ya hay datos cargados para ${claves.length} tienda-mes:\n${tiendas.slice(0,6).join('\n')}${tiendas.length>6?`\n+${tiendas.length-6} más`:''}\n\n`
+      +'Aceptar = SUMAR lo nuevo a lo existente\nCancelar = SOBREESCRIBIR (reemplazar por lo del archivo)';
+    sumar=confirm(msg);
+  }
+  if(sumar){
+    const prev={};VENTAS.forEach(v=>prev[v.anio+'|'+v.mes+'|'+v.pais+'|'+v.empresa+'|'+v.canal]=+v.facturacion||0);
+    fact.forEach(f=>{const k=f.anio+'|'+f.mes+'|'+f.pais+'|'+f.empresa+'|'+f.canal;f.facturacion+= (prev[k]||0);});
+  }
   try{
     prog('Guardando facturación…');
     if(fact.length){const a=await SB.from('ventas').upsert(fact,{onConflict:'anio,mes,pais,empresa,canal'});if(a.error)throw a.error;}
@@ -1669,6 +1695,54 @@ function renderVentas(){
   h+=`<tr class="totrow"><td class="l" colspan="2">TOTAL RED (USD)</td><td>${usd(fm)}</td><td>${usd(om)}</td><td>${pill(pm)}</td><td>${usd(fa)}</td><td>${usd(oa)}</td><td>${pill(pa)}</td></tr>`;
   h+='</tbody></table>';
   ct.innerHTML=h;
+}
+// Une filas cuyo nombre de empresa/canal difiere solo en mayúsculas
+async function normalizarVentas(){
+  if(!esAdmin()){alert('Solo el administrador puede reorganizar los datos.');return;}
+  const arregla=(rows,campo)=>{
+    const map={};
+    rows.forEach(r=>{
+      const emp=normEmpresa(r.empresa),can=normCanal(r.canal),pai=normPais(r.pais);
+      const k=[r.anio,r.mes,pai,emp,can].join('|');
+      if(!map[k])map[k]={anio:r.anio,mes:r.mes,pais:pai,empresa:emp,canal:can,[campo]:0};
+      map[k][campo]+= +r[campo]||0;
+    });
+    return Object.values(map);
+  };
+  const nv=arregla(VENTAS,'facturacion'), no=arregla(VOBJ,'objetivo').map(o=>({...o,manual:true}));
+  const cambia=nv.length!==VENTAS.length||no.length!==VOBJ.length
+    ||VENTAS.some(v=>normEmpresa(v.empresa)!==v.empresa||normCanal(v.canal)!==v.canal)
+    ||VOBJ.some(v=>normEmpresa(v.empresa)!==v.empresa||normCanal(v.canal)!==v.canal);
+  if(!cambia){alert('No hay nombres duplicados que unir: todo está normalizado.');return;}
+  if(!confirm(`Se unirán las filas cuyo nombre difiere solo en mayúsculas.\n\nFacturación: ${VENTAS.length} → ${nv.length} filas\nObjetivos: ${VOBJ.length} → ${no.length} filas\n\nLos montos de las filas repetidas se suman. ¿Continuar?`))return;
+  try{
+    prog('Uniendo duplicados…');
+    const d1=await SB.from('ventas').delete().gte('anio',0);if(d1.error)throw d1.error;
+    const d2=await SB.from('ventas_objetivo').delete().gte('anio',0);if(d2.error)throw d2.error;
+    if(nv.length){const i1=await SB.from('ventas').insert(nv);if(i1.error)throw i1.error;}
+    if(no.length){const i2=await SB.from('ventas_objetivo').insert(no);if(i2.error)throw i2.error;}
+    await cargarTodo();renderVentas();
+    alert(`✓ Duplicados unidos: facturación ${nv.length} filas · objetivos ${no.length} filas.`);
+  }catch(e){alert('No se pudo unir: '+(e.message||e));}
+  finally{prog(null);}
+}
+// Borra TODA la facturación o TODOS los objetivos de venta
+async function limpiarVentas(que){
+  if(!esAdmin()){alert('Solo el administrador puede borrar estos datos.');return;}
+  const tabla=que==='objetivos'?'ventas_objetivo':'ventas';
+  const nom=que==='objetivos'?'los objetivos de venta':'la facturación';
+  const n=que==='objetivos'?VOBJ.length:VENTAS.length;
+  if(!n){alert('No hay datos que borrar.');return;}
+  if(!confirm(`¿Borrar ${nom} de TODOS los años, países y canales?\n\nSe eliminarán ${fmt(n)} registro(s). Esta acción no se puede deshacer.`))return;
+  if(!confirm('Confirma por última vez: se borrará TODO '+nom+'.'))return;
+  try{
+    prog('Borrando…');
+    const {error}=await SB.from(tabla).delete().gte('anio',0);
+    if(error)throw error;
+    await cargarTodo();renderVentas();
+    alert('✓ '+(que==='objetivos'?'Objetivos':'Facturación')+' borrada.');
+  }catch(e){alert('No se pudo borrar: '+(e.message||e));}
+  finally{prog(null);}
 }
 async function guardarObjVentas(){
   if(!esAdmin()){alert('Solo el administrador ajusta objetivos.');return;}
