@@ -1836,9 +1836,15 @@ async function cargarValidacion(force){
       await recalcularValidacion();
     }catch(e){
       prog(null);
-      st.innerHTML=/does not exist|schema cache|function/i.test(e.message||'')
-        ?'⚠ Falta correr <b>objetivos_semana.sql</b> en Supabase para activar el recálculo rápido.'
-        :'No se pudo recalcular: '+(e.message||e);
+      const msg=String(e.message||e||'');
+      const noExiste=/does not exist|could not find|schema cache|PGRST202/i.test(msg);
+      st.innerHTML=noExiste
+        ? `⚠ El panel no encuentra las funciones de validación en Supabase.<br>
+           <b>1)</b> Verifica que corriste <b>objetivos_semana.sql</b> completo (sin errores).<br>
+           <b>2)</b> Si ya lo corriste, ejecuta esto en el SQL Editor para refrescar la API:<br>
+           <code>notify pgrst, 'reload schema';</code><br>
+           <span class="dim">Detalle técnico: ${msg}</span>`
+        : `No se pudo recalcular: ${msg}`;
       return;
     }
   }
@@ -1859,7 +1865,20 @@ async function cargarValidacion(force){
   const tp=VALID_CACHE.reduce((s,r)=>s+ +r.publicadas,0),tc=VALID_CACHE.reduce((s,r)=>s+ +r.cumplen,0),tf=VALID_CACHE.reduce((s,r)=>s+ +r.fuera,0);
   st.className='covstat ok';
   const tobj=VALID_CACHE.reduce((s,r)=>s+(r.objetivo!=null?+r.objetivo:((MATRIZ_AGG[r.empresa]||{}).pub||0)),0);
-  st.innerHTML=`✓ Todos los canales de la cobertura. Objetivo de la red: <b>${fmt(tobj)}</b> publicaciones · hoy <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de política (de ${fmt(tp)} títulos cargados). Las tiendas «sin títulos» aún no han subido publicaciones con título.`;
+  // Detector: matriz cargada con la versión anterior (filas colapsadas).
+  // Si el objetivo es mucho menor que las publicaciones con precio de la matriz,
+  // la identidad de listing quedó agrupada de más -> hay que recargar la matriz.
+  const sosp=[];
+  [...new Set(VALID_CACHE.map(r=>r.empresa))].forEach(emp=>{
+    const obj=+(VALID_CACHE.find(r=>r.empresa===emp)||{}).objetivo||0;
+    const mp=(MATRIZ_AGG[emp]||{}).pub||0;
+    if(mp>0&&obj>0&&obj<mp*0.9)sosp.push({emp,obj,mp});
+  });
+  const aviso=sosp.length?`<br><b style="color:var(--rojo)">⚠ Matriz desactualizada en: ${sosp.map(s=>`${s.emp} (objetivo ${fmt(s.obj)} vs ${fmt(s.mp)} con precio)`).join(' · ')}</b>.
+     Esa matriz se cargó con la versión anterior, que agrupaba varios listings en uno.
+     <b>Vuelve a cargar la matriz</b> (botón 📋 Cargar matriz) para corregir el objetivo y los duplicados.`:'';
+  st.innerHTML=`✓ Todos los canales de la cobertura. Objetivo de la red: <b>${fmt(tobj)}</b> publicaciones · hoy <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de política (de ${fmt(tp)} títulos cargados). Las tiendas «sin títulos» aún no han subido publicaciones con título.${aviso}`;
+  if(sosp.length)st.className='covstat warn';
   let h='<table class="mat" style="min-width:820px"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th title="Publicaciones que debe tener según la matriz (con precio)">Pub. objetivo</th><th title="Listings cargados de esta tienda">Publicadas</th><th title="Publicaciones de la matriz efectivamente cubiertas (sin doble conteo)">Cumplen</th><th>% vs objetivo</th><th title="Listings cuyo título no está en la matriz">Fuera de matriz</th><th title="Listings que repiten un título ya contado">Duplicados</th><th title="Objetivo − Cumplen">Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
   let pais0=null;
   VALID_CACHE.forEach((r,i)=>{
