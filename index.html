@@ -1115,14 +1115,57 @@ function aplicarMatrizADatos(){
 }
 function leerBuf(file){return new Promise((res,rej)=>{const r=new FileReader();
   r.onload=ev=>res(new Uint8Array(ev.target.result));r.onerror=()=>rej(new Error('lectura'));r.readAsArrayBuffer(file);});}
+// La matriz V4 ya no trae columna "Empresa": viene una empresa por archivo y el
+// nombre del fichero es el que la identifica. Se limpia el prefijo "Matriz", los
+// tokens de version (V4, v3, Rev2), los sellos numericos de subida y los separadores.
+//   Matriz_V4_Masia_Group.xlsx -> "Masia Group"
+// Despues se canonicaliza contra las empresas ya conocidas para no repetir el bug #9
+// ("MASIA GROUP" y "Masia Group" contadas como dos empresas distintas).
+function empresaDesdeArchivo(nombre){
+  let s=String(nombre||'').replace(/\.[^.]+$/,'');
+  s=s.replace(/[_\-]+/g,' ');
+  s=s.replace(/\b(matriz|matrix)\b/gi,' ');
+  s=s.replace(/\bv\s*\d+(?:[.,]\d+)?\b/gi,' ');
+  s=s.replace(/\brev\s*\d+\b/gi,' ');
+  s=s.replace(/\b\d{5,}\b/g,' ');
+  s=s.replace(/\s+/g,' ').trim();
+  return canonEmpresa(s);
+}
+// Adopta la forma exacta de una empresa ya conocida si coincide ignorando mayusculas (§3.8 / bug #9)
+function canonEmpresa(s){
+  s=String(s==null?'':s).replace(/\s+/g,' ').trim();
+  if(!s)return '';
+  const conocidas=Object.keys(MATRIZ_AGG||{}).concat(EMPRESAS||[]);
+  const hit=conocidas.find(e=>String(e).trim().toLowerCase()===s.toLowerCase());
+  return hit?hit:normEmp(s);
+}
+// ¿El libro trae columna Empresa propia? Solo mira las 30 primeras filas de cada
+// hoja (leer las 48k del libro entero solo para esto seria carisimo).
+function libroTieneEmpresa(wb){
+  return wb.SheetNames.some(sn=>{
+    const ws=wb.Sheets[sn];if(!ws||!ws['!ref'])return false;
+    const R=XLSX.utils.decode_range(ws['!ref']);
+    const maxR=Math.min(R.e.r,R.s.r+29);
+    for(let r=R.s.r;r<=maxR;r++)for(let c=R.s.c;c<=R.e.c;c++){
+      const cel=ws[XLSX.utils.encode_cell({r:r,c:c})];
+      if(cel&&String(cel.v==null?'':cel.v).trim()==='Empresa')return true;
+    }
+    return false;
+  });
+}
 // Procesa un libro (una empresa) y acumula en agg/tmap globales de la carga
-function procesarLibroMatriz(wb,agg,tmap){
+// empArch = empresa confirmada por el usuario cuando el libro no trae columna Empresa
+function procesarLibroMatriz(wb,agg,tmap,empArch){
   const hojas=[];
   wb.SheetNames.forEach(sn=>{
     const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null});
     if(!aoa.length)return;
-    const hr=aoa.findIndex(row=>row&&row.some(c=>String(c).trim()==='Empresa')
-      &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio')));
+    // Cabecera valida = "Tiene Precio" + (Empresa O al menos una columna de titulo).
+    // Empresa pasa a ser OPCIONAL: si no esta, se usa la del nombre del archivo.
+    const hr=aoa.findIndex(row=>row
+      &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio'))
+      &&(row.some(c=>String(c).trim()==='Empresa')
+         ||row.some(c=>/^t[ií]tulo/i.test(String(c==null?'':c).trim()))));
     if(hr<0)return;
     const H=aoa[hr].map(c=>String(c==null?'':c).trim());
     hojas.push({sn,aoa,hr,
@@ -1141,8 +1184,17 @@ function procesarLibroMatriz(wb,agg,tmap){
     const esPpal=hj===ppal;
     for(let i=hj.hr+1;i<hj.aoa.length;i++){
       const row=hj.aoa[i];if(!row)continue;
-      const rawE=row[hj.iEmp];if(rawE==null||String(rawE).trim()==='')continue;
-      const emp=normEmp(rawE);
+      // Con columna Empresa: la fila vacia en Empresa se descarta (comportamiento de siempre).
+      // Sin columna Empresa (V4): la fila es real si trae algun titulo; la empresa es la del archivo.
+      let emp;
+      if(hj.iEmp>=0){
+        const rawE=row[hj.iEmp];if(rawE==null||String(rawE).trim()==='')continue;
+        emp=normEmp(rawE);
+      }else{
+        if(!hj.iTits.some(o=>row[o.ix]!=null&&String(row[o.ix]).trim()!==''))continue;
+        emp=empArch;
+      }
+      if(!emp)continue;
       const pre=String(row[hj.iPre]==null?'':row[hj.iPre]).trim().toUpperCase();
       const skuComp=(hj.iSkuC>=0&&row[hj.iSkuC]!=null?String(row[hj.iSkuC]).trim():'');
       const famId=(hj.iFam>=0&&row[hj.iFam]!=null?String(row[hj.iFam]).trim():'');
@@ -1175,25 +1227,54 @@ function procesarLibroMatriz(wb,agg,tmap){
 }
 async function cargarMatriz(e){
   const files=[...e.target.files];e.target.value='';if(!files.length)return;
-  const agg={},tmap={};let ok=0,malos=[];
+  const agg={},tmap={};let ok=0,malos=[],cancelados=[];
   try{
     for(const file of files){
       prog(`Leyendo ${file.name}…`);
       try{
         const wb=XLSX.read(await leerBuf(file),{type:'array'});
-        procesarLibroMatriz(wb,agg,tmap)?ok++:malos.push(file.name);
+        let empArch='';
+        if(!libroTieneEmpresa(wb)){
+          // El libro no trae columna Empresa: se propone la del nombre del archivo y
+          // se confirma ANTES de cargar. Confirmar aqui evita crear empresas duplicadas
+          // por un nombre de fichero mal escrito (bug #9), que despues hay que unir a mano.
+          const prop=empresaDesdeArchivo(file.name);
+          prog(null);
+          const resp=prompt(`El archivo "${file.name}" no tiene columna Empresa.\n\n`
+            +`Empresa detectada a partir del nombre del archivo.\n`
+            +`Confirma o corrige antes de cargar:`,prop);
+          prog(`Leyendo ${file.name}…`);
+          if(resp===null||!String(resp).trim()){cancelados.push(file.name);continue;}
+          empArch=canonEmpresa(resp);
+        }
+        procesarLibroMatriz(wb,agg,tmap,empArch)?ok++:malos.push(file.name);
       }catch(err){malos.push(file.name);}
     }
   }finally{prog(null);}
+  // Si CUALQUIER idioma de un mismo listing (misma familia) tiene precio, todo el
+  // listing tiene precio. Corrige el caso de hojas ES con "Tiene Precio" desactualizado:
+  // sin esto, la publicación en español contaría como fuera de política Y como faltante.
+  {
+    const conPrecio=new Set();
+    Object.values(tmap).forEach(t=>{if(t.tiene_precio==='SI'&&t.fila)conPrecio.add(t.empresa+'\u0001'+t.fila);});
+    let ajust=0;
+    Object.values(tmap).forEach(t=>{
+      if(t.tiene_precio!=='SI'&&t.fila&&conPrecio.has(t.empresa+'\u0001'+t.fila)){t.tiene_precio='SI';ajust++;}
+    });
+    if(ajust)console.log(`Precio heredado por familia en ${ajust} título(s) de otro idioma.`);
+    window.__ajustePrecio=ajust;
+  }
   if(!Object.keys(agg).length){
     alert('No se contó ninguna fila con precio en '+(files.length>1?'los archivos':'el archivo')+'.'
-      +(malos.length?'\nSin columnas Empresa/Tiene Precio: '+malos.join(', '):''));return;
+      +(malos.length?'\nSin columna Tiene Precio ni titulos: '+malos.join(', '):'')
+      +(cancelados.length?'\nCancelados (empresa sin confirmar): '+cancelados.join(', '):''));return;
   }
   const filas=Object.keys(agg).map(k=>{
     const lineas={};Object.keys(agg[k].lin).forEach(l=>lineas[l]={pub:agg[k].lin[l].pub,sku:agg[k].lin[l].sku.size});
     return {empresa:k,pub:agg[k].pub,sku:agg[k].sku.size,lineas};
   });
-  const avisoMalos=malos.length?`\n⚠ Ignorados (sin columnas Empresa/Tiene Precio): ${malos.join(', ')}`:'';
+  const avisoMalos=(malos.length?`\n⚠ Ignorados (sin columna Tiene Precio ni titulos): ${malos.join(', ')}`:'')
+    +(cancelados.length?`\n⚠ Cancelados (no se confirmo la empresa): ${cancelados.join(', ')}`:'');
   guardarMatriz(filas,Object.values(tmap),avisoMalos); // conteos + títulos multi-idioma multi-archivo
 }
 
@@ -1872,11 +1953,17 @@ async function cargarValidacion(force){
   [...new Set(VALID_CACHE.map(r=>r.empresa))].forEach(emp=>{
     const obj=+(VALID_CACHE.find(r=>r.empresa===emp)||{}).objetivo||0;
     const mp=(MATRIZ_AGG[emp]||{}).pub||0;
-    if(mp>0&&obj>0&&obj<mp*0.9)sosp.push({emp,obj,mp});
+    if(mp>0&&obj>0&&obj<mp*0.9)sosp.push({emp,obj,mp,tipo:'bajo'});
+    else if(mp>0&&obj>mp*1.1)sosp.push({emp,obj,mp,tipo:'alto'});
   });
-  const aviso=sosp.length?`<br><b style="color:var(--rojo)">⚠ Matriz desactualizada en: ${sosp.map(s=>`${s.emp} (objetivo ${fmt(s.obj)} vs ${fmt(s.mp)} con precio)`).join(' · ')}</b>.
-     Esa matriz se cargó con la versión anterior, que agrupaba varios listings en uno.
-     <b>Vuelve a cargar la matriz</b> (botón 📋 Cargar matriz) para corregir el objetivo y los duplicados.`:'';
+  const bajo=sosp.filter(s=>s.tipo==='bajo'), alto=sosp.filter(s=>s.tipo==='alto');
+  let aviso='';
+  if(bajo.length)aviso+=`<br><b style="color:var(--rojo)">⚠ Objetivo agrupado de más en: ${bajo.map(s=>`${s.emp} (${fmt(s.obj)} vs ${fmt(s.mp)} con precio)`).join(' · ')}</b>.
+     Esa matriz se cargó con la versión anterior o le falta la columna <b>SKU Único por Familia</b>: varios listings distintos quedaron como uno solo.
+     Vuelve a cargar la matriz; si el aviso persiste, la columna está vacía en el Excel.`;
+  if(alto.length)aviso+=`<br><b style="color:var(--rojo)">⚠ Objetivo inflado en: ${alto.map(s=>`${s.emp} (${fmt(s.obj)} vs ${fmt(s.mp)} con precio)`).join(' · ')}</b>.
+     Su matriz tiene títulos en varios idiomas <b>sin</b> el mismo <b>SKU Único por Familia</b>, así que el mismo listing se cuenta una vez por idioma.
+     Llena esa columna en el Excel (el mismo ID para el título EN y su traducción) y recarga la matriz.`;
   st.innerHTML=`✓ Todos los canales de la cobertura. Objetivo de la red: <b>${fmt(tobj)}</b> publicaciones · hoy <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de política (de ${fmt(tp)} títulos cargados). Las tiendas «sin títulos» aún no han subido publicaciones con título.${aviso}`;
   if(sosp.length)st.className='covstat warn';
   let h='<table class="mat" style="min-width:820px"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th title="Publicaciones que debe tener según la matriz (con precio)">Pub. objetivo</th><th title="Listings cargados de esta tienda">Publicadas</th><th title="Publicaciones de la matriz efectivamente cubiertas (sin doble conteo)">Cumplen</th><th>% vs objetivo</th><th title="Listings cuyo título no está en la matriz">Fuera de matriz</th><th title="Listings que repiten un título ya contado">Duplicados</th><th title="Objetivo − Cumplen">Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
@@ -2014,7 +2101,9 @@ async function guardarMatriz(filas,titulos,aviso){
     const tp=filas.reduce((a,b)=>a+b.pub,0);
     const det=filas.slice().sort((a,b)=>a.empresa.localeCompare(b.empresa))
       .map(f=>`${f.empresa}: ${fmt(f.pub)} pub / ${fmt(f.sku)} SKU`).join('\n');
-    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}${msgTit}${aviso||''}`);
+    const ajP=window.__ajustePrecio||0;
+    const notaP=ajP?`\n${fmt(ajP)} título(s) de otro idioma heredaron el precio de su listing (columna "Tiene Precio" desactualizada en esa hoja).`:'';
+    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}${msgTit}${notaP}${aviso||''}`);
   }catch(e){prog(null);alert('No se pudo guardar la matriz: '+(e.message||e));}
 }
 function gatearUI(){
