@@ -241,10 +241,12 @@
   .objpers .amb{font-size:11px;font-weight:700;color:var(--azul);background:var(--papel);border:1px solid var(--linea);border-radius:6px;padding:2px 8px;white-space:nowrap}
   .objpers .tx{flex:1}
 
-  .selmes{font-size:13px;border:1px solid var(--linea);border-radius:8px;padding:7px 10px;background:#fff;cursor:pointer}
-  tr.subrow td{background:#F3F6FA;font-weight:700;border-top:1px solid var(--linea)}
-  .vin{width:110px;font-size:13px;border:1px solid var(--linea);border-radius:7px;padding:6px 8px;text-align:right;background:#fff}
-  .vin:focus{outline:2px solid var(--ambar)}
+  #progVal{position:fixed;bottom:18px;left:18px;z-index:290;background:#122A4C;color:#fff;padding:9px 14px;
+    border-radius:10px;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.3);display:none;align-items:center;gap:9px}
+  #progVal.err{background:var(--rojo)}
+  #progVal .spin{width:12px;height:12px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:gira .8s linear infinite}
+  #progVal.err .spin{display:none}
+  @keyframes gira{to{transform:rotate(360deg)}}
   #reporte{display:none}
   .rep-page{padding:6mm 2mm}
   .rep-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid var(--azul);padding-bottom:8px;margin-bottom:14px}
@@ -310,8 +312,6 @@
       <input id="fileMatriz" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarMatriz(event)">
       <button class="btn btn-solid" onclick="document.getElementById('filePub').click()">📦 Cargar publicaciones</button>
       <input id="filePub" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarPublicaciones(event)">
-      <button class="btn btn-ghost" onclick="document.getElementById('fileVentas').click()">💵 Cargar facturación</button>
-      <input id="fileVentas" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarVentas(event)">
       <button class="btn btn-ghost" onclick="pdfPanel()">🖨 PDF panel</button>
       <button class="btn btn-ghost" onclick="pdfEjecutivo()">📄 PDF ejecutivo</button>
       <span id="sesion" class="sesion"></span>
@@ -327,7 +327,6 @@
     <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
     <button class="tab" id="tab4" onclick="setPage(4)">Validación · Títulos</button>
     <button class="tab" id="tab5" onclick="setPage(5)">Objetivos · Semana</button>
-    <button class="tab" id="tab6" onclick="setPage(6)">Ventas · Facturación</button>
   </div>
 
   <!-- ===================== PÁGINA 1 ===================== -->
@@ -383,7 +382,8 @@
       <div class="dropzone" onclick="document.getElementById('fileMatriz').click()">
         <b>📋 Matriz (deber ser) — hoja "EN", nivel SKU</b>
         <code>Empresa</code> · <code>Tipo de Publicacion</code> · <code>SKU Corto</code> · <code>Tiene Precio</code>
-        <div class="small">Carga la matriz completa. El panel cuenta <b>publicaciones</b> = filas con <code>Tiene Precio = SI</code>, y <b>SKUs</b> = SKU Corto distintos por empresa. Define dónde se publican en la pestaña <b>Cobertura</b>.</div>
+        <div class="small">Carga la matriz completa. El panel cuenta <b>publicaciones</b> = filas con <code>Tiene Precio = SI</code>, y <b>SKUs</b> = SKU Corto distintos por empresa. Define dónde se publican en la pestaña <b>Cobertura</b>.<br>
+          <b>Camozzi:</b> se lee solo la pestaña <code>Matriz</code> (<code>Título ES</code> · <code>SKU</code> · <code>SKU único</code>); cuentan <b>todas</b> las filas, con o sin precio, y cada título único es una publicación.</div>
       </div>
       <div class="dropzone" style="margin-top:12px" onclick="document.getElementById('filePub').click()">
         <b>📦 Publicaciones (real) — un archivo por tienda</b>
@@ -398,7 +398,7 @@
     <div class="sec" style="margin-top:18px">
       <div class="sec-h">
         <h2>Cobertura · País × Empresa × Canal</h2>
-        <span class="hint">Define dónde operas. <b>Pub. Matriz</b> y <b>SKUs Matriz</b> salen de la matriz cargada (solo productos con precio).</span>
+        <span class="hint">Define dónde operas. <b>Pub. Matriz</b> y <b>SKUs Matriz</b> salen de la matriz cargada (solo productos con precio; en Camozzi, todas las filas de la pestaña Matriz).</span>
       </div>
       <div id="covStatus" class="covstat warn"></div>
       <div class="covform solo-admin">
@@ -433,39 +433,14 @@
         <span class="hint"><b>Cumplen</b> = título publicado existe en la matriz de su empresa · <b>Fuera</b> = publicado pero no está en la matriz · <b>Faltantes</b> = títulos de la matriz (con precio) sin publicar en esa tienda, cada uno con su SKU único por familia.</span>
       </div>
       <div id="valStatus" class="covstat warn"></div>
-      <div style="margin-bottom:12px"><button class="btn-cov ghost" onclick="cargarValidacion(true)">↻ Recalcular validación</button> <span class="dim" style="font-size:12px">Se recalcula solo al subir publicaciones o matriz; usa este botón para forzarlo.</span></div>
+      <div style="margin-bottom:12px"><button class="btn-cov ghost" onclick="cargarValidacion(true)">↻ Recalcular validación</button> <span class="dim" style="font-size:12px">Se regenera sola al abrir el dashboard y al subir publicaciones o matriz (en segundo plano: el panel se puede usar mientras tanto).</span></div>
       <div class="tbl-wrap"><div id="valTabla"></div></div>
       <div class="note">
         <b>Cómo funciona:</b> la comparación es exacta por título, ignorando mayúsculas y espacios repetidos (y unificando las variantes de Sullivan/Palatek). Acepta <b>todos los idiomas</b> que traiga la matriz (columnas u hojas Titulo EN / ES / PT): los faltantes se cuentan por <b>producto</b>, no por idioma.
+        <b>Camozzi</b> (Colombia y Venezuela) se valida solo con <b>Título ES</b> de la pestaña <b>Matriz</b>, y todas sus filas cuentan para el objetivo, tengan precio o no.
         Un título como <i>"1613-6105-00 Filtro de Aceite Atlas Copco"</i> <b>no cumple</b> si la matriz dice <i>"…Compatible con Atlas Copco"</i> — aparecerá en <b>Fuera de matriz</b> y su versión correcta en <b>Faltantes</b>.
         <b>Las cifras cuadran:</b> Objetivo = Cumplen + Faltantes · Publicadas = Cumplen + Fuera + Duplicados. Solo cuenta como cumplimiento lo que casa con una fila de la matriz <b>con precio</b>; un título de la matriz sin precio va a <b>Fuera</b> (el Excel indica el motivo). <b>Cumplen</b> son publicaciones de la matriz realmente cubiertas: si el mismo título se publica 3 veces, cubre 1 y las otras 2 van a <b>Duplicados</b>.<br>El botón <b>⬇ Excel</b> descarga cuatro hojas: <b>Cumplen</b> (correctas, para control), <b>Fuera de matriz</b>, <b>Duplicados</b> (títulos repetidos, con el SKU que sí se contó) y <b>Faltantes por publicar</b>.
       </div>
-    </div>
-  </div>
-
-  <!-- ===================== PÁGINA 6 · VENTAS ===================== -->
-  <div class="page" id="page6">
-    <div class="sec" style="margin-top:18px">
-      <div class="sec-h">
-        <h2>Ventas · Facturación vs Objetivo</h2>
-        <span class="hint">Montos en <b>USD</b>. Cargas un renglón por mes; el <b>acumulado anual</b> se suma solo. Excel: <code>AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO</code>.</span>
-      </div>
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
-        <div class="covpg"><label>Año</label><select id="vAnio" class="selmes" onchange="renderVentas()"></select></div>
-        <div class="covpg"><label>Mes</label><select id="vMes" class="selmes" onchange="renderVentas()"></select></div>
-        <div class="covpg"><label>País</label><select id="vFPais" class="selmes" onchange="renderVentas()"></select></div>
-        <div class="covpg"><label>Empresa</label><select id="vFEmp" class="selmes" onchange="renderVentas()"></select></div>
-        <div class="covpg"><label>Canal</label><select id="vFCan" class="selmes" onchange="renderVentas()"></select></div>
-        <div class="solo-admin" style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
-          <button class="btn-cov" onclick="guardarObjVentas()">💾 Guardar objetivos</button>
-          <button class="btn-cov ghost" onclick="normalizarVentas()" title="Une empresas que quedaron duplicadas por mayúsculas (MASIA GROUP vs Masia Group)">🔧 Unir duplicados</button>
-          <button class="btn-cov ghost" onclick="limpiarVentas('objetivos')">🗑 Limpiar objetivos</button>
-          <button class="btn-cov ghost" onclick="limpiarVentas('facturacion')">🗑 Limpiar facturación</button>
-        </div>
-      </div>
-      <div id="vKpis" class="kpis" style="margin-bottom:16px"></div>
-      <div id="vStatus" class="covstat warn"></div>
-      <div class="tbl-wrap"><div id="vTabla"></div></div>
     </div>
   </div>
 
@@ -528,6 +503,7 @@
 </div>
 
 <div id="reporte"></div>
+<div id="progVal"><span class="spin"></span><span id="progValTx"></span></div>
 
 <script>
 // ===== Listas maestras =====
@@ -848,13 +824,12 @@ function upd(idx,campo,el){
 function setMetrica(m){METRICA=m;
   document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
 function setPage(n){PAGE=n;
-  for(let i=1;i<=6;i++){
+  for(let i=1;i<=5;i++){
     document.getElementById('page'+i).classList.toggle('on',n===i);
     document.getElementById('tab'+i).classList.toggle('on',n===i);
   }
-  if(n===4&&!VALID_CACHE&&SB)cargarValidacion();
+  if(n===4&&SB){if(VALID_CACHE)pintarValidacion();else cargarValidacion();}
   if(n===5&&SB)renderObjetivos();
-  if(n===6&&SB)renderVentas();
 }
 
 // ===== Carga de PUBLICACIONES (real) =====
@@ -1091,8 +1066,13 @@ async function aplicarPublicaciones(){
         tot+=rows.length;
       }
       VALID_CACHE=null;
-      try{await recalcularValidacion(grupos.map(p=>({pais:p.pais,empresa:p.empresa,canal:p.canal})));}catch(e2){}
-      if(tot)msgTit=`\n${fmt(tot)} títulos guardados y validados — revisa la pestaña Validación · Títulos.`;
+      prog(null);
+      // Regenera la validación de las tiendas subidas (objetivos incluidos) antes de mostrar el resultado
+      let errVal='';
+      try{await regenerarValidacion(grupos.map(p=>({pais:p.pais,empresa:p.empresa,canal:p.canal})),{objetivos:true,silencioso:true});}
+      catch(e3){errVal=String(e3.message||e3);}
+      if(errVal)msgTit=`\n⚠ Títulos guardados, pero la validación falló: ${errVal}\nUsa ↻ Recalcular validación en la pestaña Validación · Títulos.`;
+      else if(tot)msgTit=`\n${fmt(tot)} títulos guardados y validación regenerada — revisa la pestaña Validación · Títulos.`;
       else msgTit='\n(Sin columna de título en el archivo: la validación por título no se actualizó.)';
     }catch(e2){
       msgTit=/does not exist|schema cache/i.test(e2.message||'')
@@ -1101,6 +1081,7 @@ async function aplicarPublicaciones(){
     }finally{prog(null);}
     cerrarModal();
     await cargarTodo();
+    if(PAGE===4)pintarValidacion();
     alert(`✓ ${filas.length} tienda(s) actualizada(s).`+(skip?` ${skip} sin asignar se omitieron.`:'')+msgTit);
   }catch(e){prog(null);alert('No se pudo guardar: '+(e.message||e));}
 }
@@ -1155,23 +1136,33 @@ function libroTieneEmpresa(wb){
 }
 // Procesa un libro (una empresa) y acumula en agg/tmap globales de la carga
 // empArch = empresa confirmada por el usuario cuando el libro no trae columna Empresa
+// Hoja "Matriz" (formato Camozzi): si el libro la trae, es la ÚNICA que cuenta;
+// las hojas "Detalle …" son auxiliares para armar los títulos y se ignoran.
+function hojaMatrizUnica(wb){return wb.SheetNames.find(sn=>String(sn).trim().toLowerCase()==='matriz')||null;}
 function procesarLibroMatriz(wb,agg,tmap,empArch){
   const hojas=[];
-  wb.SheetNames.forEach(sn=>{
+  const snUnica=hojaMatrizUnica(wb);
+  const esTitulo=c=>/^t[ií]tulo/i.test(String(c==null?'':c).trim());
+  (snUnica?[snUnica]:wb.SheetNames).forEach(sn=>{
     const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null});
     if(!aoa.length)return;
-    // Cabecera valida = "Tiene Precio" + (Empresa O al menos una columna de titulo).
-    // Empresa pasa a ser OPCIONAL: si no esta, se usa la del nombre del archivo.
-    const hr=aoa.findIndex(row=>row
-      &&row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio'))
-      &&(row.some(c=>String(c).trim()==='Empresa')
-         ||row.some(c=>/^t[ií]tulo/i.test(String(c==null?'':c).trim()))));
+    // Formato clásico: cabecera = "Tiene Precio" + (Empresa O al menos una columna de título).
+    // Formato hoja "Matriz" (Camozzi): basta una columna de título; "Tiene Precio" es opcional
+    // y, si no está, TODAS las filas cuentan (con o sin precio).
+    const hr=aoa.findIndex(row=>row&&(snUnica
+      ? row.some(esTitulo)
+      : (row.some(c=>String(c).trim().toLowerCase().startsWith('tiene precio'))
+         &&(row.some(c=>String(c).trim()==='Empresa')||row.some(esTitulo)))));
     if(hr<0)return;
     const H=aoa[hr].map(c=>String(c==null?'':c).trim());
-    hojas.push({sn,aoa,hr,
+    const iCortoStd=(H.indexOf('SKU Corto')>=0?H.indexOf('SKU Corto'):H.findIndex(x=>x.toLowerCase().includes('sku corto')));
+    hojas.push({sn,aoa,hr,unica:!!snUnica,
       iEmp:H.indexOf('Empresa'),
       iPre:H.findIndex(x=>x.toLowerCase().startsWith('tiene precio')),
-      iCorto:(H.indexOf('SKU Corto')>=0?H.indexOf('SKU Corto'):H.findIndex(x=>x.toLowerCase().includes('sku corto'))),
+      // Sin "SKU Corto" (Camozzi) el producto físico es la columna "SKU"
+      iCorto:(iCortoStd>=0?iCortoStd:(snUnica?H.findIndex(x=>x.toLowerCase()==='sku'):-1)),
+      // "SKU único" (Camozzi): se guarda como SKU del listing para el Excel de faltantes
+      iSkuU:H.findIndex(x=>/^sku\s+[uú]nico$/i.test(x)),
       iSkuC:(H.findIndex(x=>x.toLowerCase().trim()==='sku completo')>=0?H.findIndex(x=>x.toLowerCase().trim()==='sku completo'):H.findIndex(x=>x.toLowerCase().includes('sku completo'))),
       iFam:H.findIndex(x=>/familia/i.test(x)&&/sku/i.test(x)),
       iTits:H.map((x,ix)=>{if(!/^t[ií]tulo/.test(x.toLowerCase()))return null;
@@ -1195,39 +1186,51 @@ function procesarLibroMatriz(wb,agg,tmap,empArch){
         emp=empArch;
       }
       if(!emp)continue;
-      const pre=String(row[hj.iPre]==null?'':row[hj.iPre]).trim().toUpperCase();
+      // Sin columna "Tiene Precio" (hoja Matriz de Camozzi): toda fila cuenta como publicable
+      const pre=hj.iPre<0?'SI':String(row[hj.iPre]==null?'':row[hj.iPre]).trim().toUpperCase();
       const skuComp=(hj.iSkuC>=0&&row[hj.iSkuC]!=null?String(row[hj.iSkuC]).trim():'');
+      const skuUni=(hj.iSkuU>=0&&row[hj.iSkuU]!=null?String(row[hj.iSkuU]).trim():'');
       const famId=(hj.iFam>=0&&row[hj.iFam]!=null?String(row[hj.iFam]).trim():'');
       // "fila" identifica un LISTING (una equivalencia OEM): SKU Único por Familia.
       // Así los faltantes se cuentan/listan por listing y no se colapsan por producto físico.
       // "fila" = identidad del listing = SKU Único por Familia. Si viene VACÍO
       // (caso Masia Rentals), NO usar SKU Completo/Corto (agrupan varios listings
       // distintos): caer al título, que sí distingue cada publicación.
+      // Camozzi: sin "SKU Único por Familia" la identidad es el título (cada título único = 1 listing).
+      // No se usa "SKU único" como identidad porque hay códigos asignados a dos títulos distintos.
       const filaId=famId||'';
+      let titNuevo=false;
       hj.iTits.forEach(o=>{
         const tt=row[o.ix]!=null?String(row[o.ix]).trim():'';if(!tt)return;
         const n=normTitulo(tt),k=emp+'\u0001'+n;
-        if(!tmap[k])tmap[k]={empresa:emp,titulo_norm:n,titulo:tt,sku:skuComp||filaId,tiene_precio:pre==='SI'?'SI':'NO',fila:filaId||n,idioma:o.idi};
+        if(!tmap[k]){tmap[k]={empresa:emp,titulo_norm:n,titulo:tt,sku:skuComp||skuUni||filaId,tiene_precio:pre==='SI'?'SI':'NO',fila:filaId||n,idioma:o.idi};titNuevo=true;}
         else if(pre==='SI')tmap[k].tiene_precio='SI';
       });
       if(!esPpal||pre!=='SI')continue;
       if(!agg[emp])agg[emp]={pub:0,sku:new Set(),lin:{}};
-      agg[emp].pub++;
+      // Hoja única: el objetivo son títulos ÚNICOS; un título repetido no suma publicación
+      // (con validación por título nunca podría cubrirse dos veces). Se reporta al cargar.
+      const cuentaPub=!(hj.unica&&!famId&&!titNuevo);
+      if(!cuentaPub){(DUP_TIT_MATRIZ[emp]=DUP_TIT_MATRIZ[emp]||0);DUP_TIT_MATRIZ[emp]++;}
+      if(cuentaPub)agg[emp].pub++;
       const sc=hj.iCorto>=0?row[hj.iCorto]:null;
       const scv=sc!=null?String(sc).trim().toUpperCase():'';
       if(scv){
         agg[emp].sku.add(scv);
         const l=lineaSKU(scv);
-        (agg[emp].lin[l]=agg[emp].lin[l]||{pub:0,sku:new Set()}).pub++;
-        agg[emp].lin[l].sku.add(scv);
+        const lo=(agg[emp].lin[l]=agg[emp].lin[l]||{pub:0,sku:new Set()});
+        if(cuentaPub)lo.pub++;
+        lo.sku.add(scv);
       }
     }
   });
   return true;
 }
+let DUP_TIT_MATRIZ={}; // empresa -> nº de filas con título repetido (hoja única), para el aviso de carga
 async function cargarMatriz(e){
   const files=[...e.target.files];e.target.value='';if(!files.length)return;
   const agg={},tmap={};let ok=0,malos=[],cancelados=[];
+  DUP_TIT_MATRIZ={};
   try{
     for(const file of files){
       prog(`Leyendo ${file.name}…`);
@@ -1274,7 +1277,8 @@ async function cargarMatriz(e){
     return {empresa:k,pub:agg[k].pub,sku:agg[k].sku.size,lineas};
   });
   const avisoMalos=(malos.length?`\n⚠ Ignorados (sin columna Tiene Precio ni titulos): ${malos.join(', ')}`:'')
-    +(cancelados.length?`\n⚠ Cancelados (no se confirmo la empresa): ${cancelados.join(', ')}`:'');
+    +(cancelados.length?`\n⚠ Cancelados (no se confirmo la empresa): ${cancelados.join(', ')}`:'')
+    +Object.keys(DUP_TIT_MATRIZ).map(emp=>`\n⚠ ${emp}: ${fmt(DUP_TIT_MATRIZ[emp])} fila(s) de la matriz repiten un título ya existente; se cuentan una sola vez (revisa esos títulos en el Excel).`).join('');
   guardarMatriz(filas,Object.values(tmap),avisoMalos); // conteos + títulos multi-idioma multi-archivo
 }
 
@@ -1493,18 +1497,6 @@ function buildReporte(){
     objGen.forEach(o=>H+=`<li class="b">${o.texto}</li>`);
     H+='</ul>';
   }
-  // Bloque de ventas en página 1 (si hay datos)
-  if(VENTAS.length||VOBJ.length){
-    const anio=Math.max(...[...VENTAS,...VOBJ].map(v=>v.anio)), mesMax=Math.max(...VENTAS.filter(v=>v.anio===anio).map(v=>v.mes),0)||new Date().getMonth()+1;
-    const fm=VENTAS.filter(v=>v.anio===anio&&v.mes===mesMax).reduce((s,v)=>s+ +v.facturacion,0);
-    const om=VOBJ.filter(v=>v.anio===anio&&v.mes===mesMax).reduce((s,v)=>s+ +v.objetivo,0);
-    const fa=VENTAS.filter(v=>v.anio===anio).reduce((s,v)=>s+ +v.facturacion,0);
-    const oa=VOBJ.filter(v=>v.anio===anio).reduce((s,v)=>s+ +v.objetivo,0);
-    H+=`<div class="rep-sub">Ventas ${anio} (USD)</div><table class="rep"><thead><tr><th class="l">Periodo</th><th>Facturación</th><th>Objetivo</th><th>% cumpl.</th></tr></thead><tbody>
-      <tr><td class="l">${MESES[mesMax-1]} (mes)</td><td>${usd(fm)}</td><td>${usd(om)}</td><td>${pp(om?Math.round(fm/om*100):null)}</td></tr>
-      <tr style="font-weight:700"><td class="l">Acumulado enero–${MESES[mesMax-1]}</td><td>${usd(fa)}</td><td>${usd(oa)}</td><td>${pp(oa?Math.round(fa/oa*100):null)}</td></tr>
-    </tbody></table>`;
-  }
   H+=`<div class="rep-foot"><span>Masia Group · Gestión E-commerce</span><span>Confidencial · uso interno</span></div></div>`;
   // ---------- Página por país ----------
   ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).forEach(p=>{
@@ -1532,18 +1524,6 @@ function buildReporte(){
     const fort=rs.filter(r=>pctPUB(r)!=null&&pctPUB(r)>=90);
     if(fort.length){H+='<div class="rep-sub">Fortalezas a sostener</div><ul class="acc">';
       fort.forEach(r=>H+=`<li class="g"><b>${r.empresa} · ${r.canal}</b> — ${pctPUB(r)}% de cumplimiento (${fmt(r.pub)}/${fmt(pubMz(r))}). Mantener y vigilar bajas.</li>`);H+='</ul>';}
-    // Ventas del país
-    if(VENTAS.some(v=>v.pais===p)||VOBJ.some(v=>v.pais===p)){
-      const anio=Math.max(...[...VENTAS,...VOBJ].map(v=>v.anio)), mesMax=Math.max(...VENTAS.filter(v=>v.anio===anio).map(v=>v.mes),0)||new Date().getMonth()+1;
-      const fm=VENTAS.filter(v=>v.pais===p&&v.anio===anio&&v.mes===mesMax).reduce((s,v)=>s+ +v.facturacion,0);
-      const om=VOBJ.filter(v=>v.pais===p&&v.anio===anio&&v.mes===mesMax).reduce((s,v)=>s+ +v.objetivo,0);
-      const fa=VENTAS.filter(v=>v.pais===p&&v.anio===anio).reduce((s,v)=>s+ +v.facturacion,0);
-      const oa=VOBJ.filter(v=>v.pais===p&&v.anio===anio).reduce((s,v)=>s+ +v.objetivo,0);
-      H+=`<div class="rep-sub">Ventas ${anio} (USD)</div><table class="rep"><thead><tr><th class="l">Periodo</th><th>Facturación</th><th>Objetivo</th><th>% cumpl.</th></tr></thead><tbody>
-        <tr><td class="l">${MESES[mesMax-1]} (mes)</td><td>${usd(fm)}</td><td>${usd(om)}</td><td>${pp(om?Math.round(fm/om*100):null)}</td></tr>
-        <tr style="font-weight:700"><td class="l">Acumulado</td><td>${usd(fa)}</td><td>${usd(oa)}</td><td>${pp(oa?Math.round(fa/oa*100):null)}</td></tr>
-      </tbody></table>`;
-    }
     H+=`<div class="rep-foot"><span>Masia Group · ${p}</span><span>Confidencial · uso interno</span></div></div>`;
   });
   document.getElementById('reporte').innerHTML=H;
@@ -1554,7 +1534,6 @@ window.onafterprint=()=>document.body.classList.remove('modo-reporte');
 
 // ===================== Capa Supabase (datos · login · roles) =====================
 let SB=null, ME=null, COBROWS=[], PUBROWS=[], VALID_CACHE=null, VALID_MAP={}, OBJ_MAP={}, CUSTOM_OBJS=[];
-let VENTAS=[], VOBJ=[];
 // "Fuera de política" de una tienda = títulos publicados que no coinciden con la matriz
 function fueraPol(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];if(!v)return null;if(+v.publicadas===0&&r.pub>0)return null;return +v.fuera;}
 function pubValidadas(r){const v=VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal];return v?+v.publicadas:null;}
@@ -1652,244 +1631,19 @@ async function eliminarObjPers(id){
 }
 
 
-// ===== Ventas · Facturación =====
-const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-function usd(n){return '$'+(Math.round(+n||0)).toLocaleString('en-US');}
-function numCol(v){ // "12.500,50" / "12,500.50" / "12500" -> número
-  let s=String(v==null?'':v).replace(/[^0-9.,\-]/g,'').trim();
-  if(!s)return 0;
-  if(s.includes('.')&&s.includes(',')){ // el último separador es el decimal
-    s = s.lastIndexOf(',')>s.lastIndexOf('.') ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
-  } else if(s.includes(',')){ const p=s.split(','); s = (p[p.length-1].length===2)? s.replace(/,/g,x=>'.').replace(/\.(?=.*\.)/g,'') : s.replace(/,/g,''); if(s.split('.').length>2){s=s.replace(/\.(?=.*\.)/g,'');} }
-  const n=parseFloat(s); return isNaN(n)?0:n;
+// ===== Regeneración de la validación =====
+// Tiendas validadas en paralelo (cada RPC valida UNA tienda). Si Supabase reporta bloqueos, bajar a 1.
+const VAL_PARALELO=3;
+let VAL_COLA=Promise.resolve();   // las regeneraciones se encolan: nunca corren dos a la vez
+let VAL_ULT_ERR='';               // último error de una regeneración en segundo plano
+function progVal(msg,esErr){
+  const el=document.getElementById('progVal');if(!el)return;
+  if(msg===null){el.style.display='none';return;}
+  el.classList.toggle('err',!!esErr);
+  document.getElementById('progValTx').textContent=msg;
+  el.style.display='flex';
 }
-async function cargarVentas(e){
-  const files=[...e.target.files]; e.target.value=''; if(!files.length)return;
-  const factMap={}, objMap={}; let skip=0, filas=0, fundidas=0;
-  for(const file of files){
-    const buf=await new Promise((res,rej)=>{const r=new FileReader();r.onload=ev=>res(new Uint8Array(ev.target.result));r.onerror=rej;r.readAsArrayBuffer(file);});
-    const wb=XLSX.read(buf,{type:'array'});
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
-    if(!rows.length)continue;
-    const keys=Object.keys(rows[0]);
-    const f=(cands)=>keys.find(k=>cands.includes(k.toLowerCase().trim()))||null;
-    const cA=f(['año','anio','ano','year']),cM=f(['mes','month']),cP=f(COL_PAIS),cE=f(COL_EMP),cC=f(COL_CAN);
-    const cF=f(['facturacion','facturación','ventas','venta','monto','importe','revenue','sales','billing']);
-    const cO=f(['objetivo','meta','target','goal','presupuesto']);
-    if(!cA||!cM||!cP||!cE||!cC||(!cF&&!cO)){alert(`El archivo ${file.name} debe tener columnas AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION (y opcional OBJETIVO).`);continue;}
-    rows.forEach(x=>{
-      const anio=parseInt(String(x[cA]).replace(/\D/g,''))||0;
-      let mesRaw=String(x[cM]).trim(); let mes=parseInt(mesRaw.replace(/\D/g,''))||0;
-      if(!mes){const im=MESES.findIndex(m=>mesRaw.toLowerCase().startsWith(m.toLowerCase()));if(im>=0)mes=im+1;}
-      const pais=normPais(x[cP]),empresa=normEmpresa(x[cE]),canal=normCanal(x[cC]);
-      if(!anio||!mes||!pais||!empresa||!canal){skip++;return;}
-      filas++;
-      const k=anio+'|'+mes+'|'+pais+'|'+empresa+'|'+canal;
-      // Consolidar: si el archivo trae varias filas de la misma tienda/mes, la
-      // facturación se SUMA (son parciales) y el objetivo se agrupa aparte.
-      if(cF&&String(x[cF]).trim()!==''){
-        if(factMap[k])fundidas++;
-        factMap[k]=(factMap[k]||{anio,mes,pais,empresa,canal,facturacion:0});
-        factMap[k].facturacion+=numCol(x[cF]);
-      }
-      if(cO&&String(x[cO]).trim()!==''){
-        objMap[k]=objMap[k]||{anio,mes,pais,empresa,canal,vals:[]};
-        objMap[k].vals.push(numCol(x[cO]));
-      }
-    });
-  }
-  const fact=Object.values(factMap);
-  // Objetivo: si el mismo valor se repite en varias filas (es el objetivo del mes
-  // escrito en cada renglón) se usa una sola vez; si son valores distintos, se suman.
-  const obj=Object.values(objMap).map(o=>{
-    const uniq=[...new Set(o.vals.filter(v=>v))];
-    const objetivo=uniq.length<=1?(uniq[0]||0):o.vals.reduce((s,v)=>s+v,0);
-    return {anio:o.anio,mes:o.mes,pais:o.pais,empresa:o.empresa,canal:o.canal,objetivo,manual:false};
-  });
-  if(!fact.length&&!obj.length){alert('No se leyó ninguna fila válida.'+(skip?` (${skip} omitidas)`:''));return;}
-  // ¿Qué hacer con las tiendas-mes que ya tienen datos?
-  const claves=[...new Set([...fact,...obj].map(r=>r.anio+'|'+r.mes+'|'+r.pais+'|'+r.empresa+'|'+r.canal))];
-  const yaHay=VENTAS.concat(VOBJ).some(v=>claves.includes(v.anio+'|'+v.mes+'|'+v.pais+'|'+v.empresa+'|'+v.canal));
-  let sumar=false;
-  if(yaHay){
-    const tiendas=[...new Set(claves.map(k=>{const p=k.split('|');return p[3]+' · '+p[4];}))];
-    const msg=`Ya hay datos cargados para ${claves.length} tienda-mes:\n${tiendas.slice(0,6).join('\n')}${tiendas.length>6?`\n+${tiendas.length-6} más`:''}\n\n`
-      +'Aceptar = SUMAR lo nuevo a lo existente\nCancelar = SOBREESCRIBIR (reemplazar por lo del archivo)';
-    sumar=confirm(msg);
-  }
-  if(sumar){
-    const prev={};VENTAS.forEach(v=>prev[v.anio+'|'+v.mes+'|'+v.pais+'|'+v.empresa+'|'+v.canal]=+v.facturacion||0);
-    fact.forEach(f=>{const k=f.anio+'|'+f.mes+'|'+f.pais+'|'+f.empresa+'|'+f.canal;f.facturacion+= (prev[k]||0);});
-  }
-  try{
-    prog('Guardando facturación…');
-    if(fact.length){const a=await SB.from('ventas').upsert(fact,{onConflict:'anio,mes,pais,empresa,canal'});if(a.error)throw a.error;}
-    if(obj.length){const b=await SB.from('ventas_objetivo').upsert(obj,{onConflict:'anio,mes,pais,empresa,canal'});if(b.error)throw b.error;}
-    await cargarTodo(); setPage(6); renderVentas();
-    alert(`✓ Facturación cargada: ${fmt(fact.length)} tienda-mes${obj.length?` y ${fmt(obj.length)} objetivo(s)`:''}.`
-      +(fundidas?`\n${fmt(fundidas)} fila(s) repetidas de la misma tienda y mes se sumaron.`:'')
-      +(skip?`\n${skip} fila(s) omitida(s) por datos incompletos.`:''));
-  }catch(err){alert(/does not exist|schema cache/i.test(err.message||'')?'⚠ Falta correr ventas.sql en Supabase.':'No se pudo guardar: '+(err.message||err));}
-  finally{prog(null);}
-}
-function ventasAnios(){const s=new Set([...VENTAS,...VOBJ].map(r=>r.anio));if(!s.size)s.add(new Date().getFullYear());return [...s].sort((a,b)=>b-a);}
-function renderVentas(){
-  const ct=document.getElementById('vTabla'); if(!ct)return;
-  const selA=document.getElementById('vAnio'), selM=document.getElementById('vMes');
-  if(!selA.dataset.init||selA.dataset.anios!==ventasAnios().join()){
-    selA.innerHTML=ventasAnios().map(a=>`<option>${a}</option>`).join('');
-    selA.dataset.init='1'; selA.dataset.anios=ventasAnios().join();
-  }
-  if(!selM.dataset.init){selM.innerHTML=MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');selM.value=(new Date().getMonth()+1);selM.dataset.init='1';}
-  const anio=+selA.value||ventasAnios()[0], mes=+selM.value||1;
-  // Universo de tiendas: cobertura/datos del panel + las que tengan ventas del año
-  let tiendas=[...new Set((DATA||[]).map(r=>r.pais+'|'+r.empresa+'|'+r.canal))]
-    .concat([...VENTAS,...VOBJ].filter(v=>v.anio===anio).map(v=>v.pais+'|'+v.empresa+'|'+v.canal))
-    .filter((v,i,a)=>a.indexOf(v)===i);
-  // Filtros propios de esta pestaña
-  const partes=tiendas.map(k=>k.split('|'));
-  const opts=(sel,vals,lab)=>{
-    const el=document.getElementById(sel);
-    const prev=el.value;
-    const lista=[...new Set(vals)].filter(Boolean).sort((a,b)=>lab==='País'?(ORD_PAIS.indexOf(a)-ORD_PAIS.indexOf(b)):a.localeCompare(b));
-    el.innerHTML=`<option value="">Todos</option>`+lista.map(v=>`<option${v===prev?' selected':''}>${v}</option>`).join('');
-    if(prev&&lista.includes(prev))el.value=prev;
-    return el.value;
-  };
-  const fPais=opts('vFPais',partes.map(p=>p[0]),'País');
-  const fEmp =opts('vFEmp', partes.map(p=>p[1]),'Empresa');
-  const fCan =opts('vFCan', partes.map(p=>p[2]),'Canal');
-  tiendas=tiendas.filter(k=>{const [p,e,c]=k.split('|');
-    return (!fPais||p===fPais)&&(!fEmp||e===fEmp)&&(!fCan||c===fCan);});
-  const enFiltro=k=>tiendas.includes(k);
-  const fMes={},fAcu={},fAnio={},oMes={},oAcu={},oAnio={};
-  VENTAS.forEach(v=>{if(v.anio!==anio)return;const k=v.pais+'|'+v.empresa+'|'+v.canal;if(!enFiltro(k))return;const n=+v.facturacion||0;
-    fAnio[k]=(fAnio[k]||0)+n;                      // todo el año (los 12 meses cargados)
-    if(v.mes<=mes)fAcu[k]=(fAcu[k]||0)+n;          // acumulado enero → mes elegido
-    if(v.mes===mes)fMes[k]=(fMes[k]||0)+n;});      // solo el mes elegido
-  VOBJ.forEach(v=>{if(v.anio!==anio)return;const k=v.pais+'|'+v.empresa+'|'+v.canal;if(!enFiltro(k))return;const n=+v.objetivo||0;
-    oAnio[k]=(oAnio[k]||0)+n;
-    if(v.mes<=mes)oAcu[k]=(oAcu[k]||0)+n;
-    if(v.mes===mes)oMes[k]=(oMes[k]||0)+n;});
-  // KPIs
-  const sum=o=>Object.values(o).reduce((s,x)=>s+x,0);
-  const fm=sum(fMes),om=sum(oMes),fc=sum(fAcu),oc=sum(oAcu),fa=sum(fAnio),oa=sum(oAnio);
-  const pm=om?Math.round(fm/om*100):null, pc=oc?Math.round(fc/oc*100):null, pa=oa?Math.round(fa/oa*100):null;
-  const kc=p=>p==null?'is-n':'is-'+cls(p);
-  const tarjeta=(lab,f,o,p,sub)=>`<div class="kpi ${kc(p)}">
-    <div class="k-lab">${lab}</div>
-    <div class="k-val" style="font-size:26px">${usd(f)}</div>
-    <div class="k-sub">Objetivo: ${usd(o)}${p==null?'':` <b>(${p}%)</b>`}${sub?` · ${sub}`:''}</div></div>`;
-  document.getElementById('vKpis').innerHTML=
-     tarjeta(`Facturación del mes · ${MESES[mes-1]} ${anio}`,fm,om,pm)
-    +tarjeta(`Acumulado enero–${MESES[mes-1]} ${anio}`,fc,oc,pc)
-    +tarjeta(`Total del año ${anio}`,fa,oa,pa);
-  const st=document.getElementById('vStatus');
-  st.className='covstat ok';
-  st.innerHTML=`Mostrando <b>${MESES[mes-1]} ${anio}</b>. La tabla detalla el mes y el <b>acumulado enero–${MESES[mes-1]}</b>; la tercera tarjeta suma todo el año cargado. Edita las metas del mes en la columna <b>Objetivo mes</b> y pulsa Guardar.`;
-  // Tabla
-  const admin=esAdmin();
-  const ord=tiendas.map(k=>{const [p,e,c]=k.split('|');return {k,p,e,c};}).sort((a,b)=>ORD_PAIS.indexOf(a.p)-ORD_PAIS.indexOf(b.p)||a.e.localeCompare(b.e)||a.c.localeCompare(b.c));
-  let h='<table class="mat" style="min-width:900px"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th>Fact. mes</th><th>Objetivo mes</th><th>% mes</th><th>Fact. acum.</th><th>Objetivo acum.</th><th>% acum.</th></tr></thead><tbody>';
-  let p0=null, acc=null;
-  const subFila=(p,a)=>{
-    if(!a)return '';
-    const pm1=a.om?Math.round(a.fm/a.om*100):null, pc1=a.oc?Math.round(a.fc/a.oc*100):null;
-    return `<tr class="subrow"><td class="l" colspan="2">Total ${p}</td>
-      <td>${usd(a.fm)}</td><td>${usd(a.om)}</td><td>${pill(pm1)}</td>
-      <td>${usd(a.fc)}</td><td>${usd(a.oc)}</td><td>${pill(pc1)}</td></tr>`;
-  };
-  ord.forEach(o=>{
-    if(o.p!==p0){
-      if(acc)h+=subFila(p0,acc);
-      h+=`<tr class="grp-row"><td colspan="8">${FLAGS[o.p]||''} ${o.p}</td></tr>`;
-      p0=o.p; acc={fm:0,om:0,fc:0,oc:0};
-    }
-    const k=o.k, fmM=fMes[k]||0, faA=fAcu[k]||0, omM=oMes[k]||0, oaA=oAcu[k]||0;
-    acc.fm+=fmM; acc.om+=omM; acc.fc+=faA; acc.oc+=oaA;
-    const pmr=omM?Math.round(fmM/omM*100):null, par=oaA?Math.round(faA/oaA*100):null;
-    const inO=admin?`<input type="number" min="0" step="1" class="vin" data-k="${k}" value="${omM||''}" placeholder="0">`:usd(omM);
-    h+=`<tr><td class="l">${o.e}</td><td class="l dim">${o.c}</td>
-      <td>${usd(fmM)}</td><td>${inO}</td><td>${pill(pmr)}</td>
-      <td>${usd(faA)}</td><td>${usd(oaA)}</td><td>${pill(par)}</td></tr>`;
-  });
-  if(acc)h+=subFila(p0,acc);
-  if(!ord.length)h+='<tr><td colspan="8" class="empty">Sin datos de ventas para este año. Carga el Excel con 💵 Cargar facturación.</td></tr>';
-  h+=`<tr class="totrow"><td class="l" colspan="2">TOTAL RED (USD)</td><td>${usd(fm)}</td><td>${usd(om)}</td><td>${pill(pm)}</td><td>${usd(fc)}</td><td>${usd(oc)}</td><td>${pill(pc)}</td></tr>`;
-  h+='</tbody></table>';
-  ct.innerHTML=h;
-}
-// Une filas cuyo nombre de empresa/canal difiere solo en mayúsculas
-async function normalizarVentas(){
-  if(!esAdmin()){alert('Solo el administrador puede reorganizar los datos.');return;}
-  const arregla=(rows,campo)=>{
-    const map={};
-    rows.forEach(r=>{
-      const emp=normEmpresa(r.empresa),can=normCanal(r.canal),pai=normPais(r.pais);
-      const k=[r.anio,r.mes,pai,emp,can].join('|');
-      if(!map[k])map[k]={anio:r.anio,mes:r.mes,pais:pai,empresa:emp,canal:can,[campo]:0};
-      map[k][campo]+= +r[campo]||0;
-    });
-    return Object.values(map);
-  };
-  const nv=arregla(VENTAS,'facturacion'), no=arregla(VOBJ,'objetivo').map(o=>({...o,manual:true}));
-  const cambia=nv.length!==VENTAS.length||no.length!==VOBJ.length
-    ||VENTAS.some(v=>normEmpresa(v.empresa)!==v.empresa||normCanal(v.canal)!==v.canal)
-    ||VOBJ.some(v=>normEmpresa(v.empresa)!==v.empresa||normCanal(v.canal)!==v.canal);
-  if(!cambia){alert('No hay nombres duplicados que unir: todo está normalizado.');return;}
-  if(!confirm(`Se unirán las filas cuyo nombre difiere solo en mayúsculas.\n\nFacturación: ${VENTAS.length} → ${nv.length} filas\nObjetivos: ${VOBJ.length} → ${no.length} filas\n\nLos montos de las filas repetidas se suman. ¿Continuar?`))return;
-  try{
-    prog('Uniendo duplicados…');
-    const d1=await SB.from('ventas').delete().gte('anio',0);if(d1.error)throw d1.error;
-    const d2=await SB.from('ventas_objetivo').delete().gte('anio',0);if(d2.error)throw d2.error;
-    if(nv.length){const i1=await SB.from('ventas').insert(nv);if(i1.error)throw i1.error;}
-    if(no.length){const i2=await SB.from('ventas_objetivo').insert(no);if(i2.error)throw i2.error;}
-    await cargarTodo();renderVentas();
-    alert(`✓ Duplicados unidos: facturación ${nv.length} filas · objetivos ${no.length} filas.`);
-  }catch(e){alert('No se pudo unir: '+(e.message||e));}
-  finally{prog(null);}
-}
-// Borra TODA la facturación o TODOS los objetivos de venta
-async function limpiarVentas(que){
-  if(!esAdmin()){alert('Solo el administrador puede borrar estos datos.');return;}
-  const tabla=que==='objetivos'?'ventas_objetivo':'ventas';
-  const nom=que==='objetivos'?'los objetivos de venta':'la facturación';
-  const n=que==='objetivos'?VOBJ.length:VENTAS.length;
-  if(!n){alert('No hay datos que borrar.');return;}
-  if(!confirm(`¿Borrar ${nom} de TODOS los años, países y canales?\n\nSe eliminarán ${fmt(n)} registro(s). Esta acción no se puede deshacer.`))return;
-  if(!confirm('Confirma por última vez: se borrará TODO '+nom+'.'))return;
-  try{
-    prog('Borrando…');
-    const {error}=await SB.from(tabla).delete().gte('anio',0);
-    if(error)throw error;
-    await cargarTodo();renderVentas();
-    alert('✓ '+(que==='objetivos'?'Objetivos':'Facturación')+' borrada.');
-  }catch(e){alert('No se pudo borrar: '+(e.message||e));}
-  finally{prog(null);}
-}
-async function guardarObjVentas(){
-  if(!esAdmin()){alert('Solo el administrador ajusta objetivos.');return;}
-  const anio=+document.getElementById('vAnio').value, mes=+document.getElementById('vMes').value;
-  const filasO=[];
-  document.querySelectorAll('#vTabla .vin').forEach(i=>{
-    const [pais,empresa,canal]=i.dataset.k.split('|');
-    const val=i.value.trim();
-    if(val!=='')filasO.push({anio,mes,pais,empresa,canal,objetivo:+val,manual:true});
-  });
-  try{
-    prog('Guardando objetivos de venta…');
-    // borra objetivos del mes y reinserta lo capturado (permite dejar en blanco = sin objetivo)
-    const del=await SB.from('ventas_objetivo').delete().match({anio,mes});
-    if(del.error)throw del.error;
-    if(filasO.length){const ins=await SB.from('ventas_objetivo').insert(filasO);if(ins.error)throw ins.error;}
-    await cargarTodo(); renderVentas();
-    alert(`✓ Objetivos de ${MESES[mes-1]} ${anio} guardados: ${filasO.length} tienda(s).`);
-  }catch(e){alert('No se pudo guardar: '+(e.message||e));}
-  finally{prog(null);}
-}
-
-// Recalcula la validación tienda por tienda (rápido y sin timeouts).
-// Si se pasan tiendas, solo esas; si no, todas.
+// Recalcula la validación tienda por tienda. Si se pasan tiendas, solo esas; si no, todas.
 async function recalcularValidacion(tiendas){
   let lista=tiendas;
   if(!lista){
@@ -1897,50 +1651,85 @@ async function recalcularValidacion(tiendas){
     if(error)throw error;
     lista=data||[];
   }
-  let n=0;
-  for(const t of lista){
-    prog(`Validando ${++n}/${lista.length} · ${t.empresa} · ${t.canal}…`);
-    const {error}=await SB.rpc('validar_tienda',{p_pais:t.pais,p_empresa:t.empresa,p_canal:t.canal});
-    if(error)throw error;
-  }
-  prog(null);
+  let idx=0,hechas=0,fallo=null;
+  const worker=async()=>{
+    while(idx<lista.length&&!fallo){
+      const t=lista[idx++];
+      const {error}=await SB.rpc('validar_tienda',{p_pais:t.pais,p_empresa:t.empresa,p_canal:t.canal});
+      if(error){fallo=error;return;}
+      progVal(`Regenerando validación ${++hechas}/${lista.length} · ${t.empresa} · ${t.canal}`);
+    }
+  };
+  await Promise.all(Array.from({length:Math.max(1,Math.min(VAL_PARALELO,lista.length))},worker));
+  if(fallo)throw fallo;
+}
+// Regenera la validación (objetivos por empresa + tiendas) y refresca el panel al terminar.
+//  tiendas: null = todas · opts.objetivos: recalcular objetivos por empresa
+//  opts.silencioso: el llamador muestra el error (carga de archivos); si no, va al indicador.
+function regenerarValidacion(tiendas,opts){
+  opts=opts||{};
+  const tarea=async()=>{
+    progVal('Regenerando validación…');
+    try{
+      if(opts.objetivos){const r=await SB.rpc('refrescar_objetivos');if(r.error)throw r.error;}
+      await recalcularValidacion(tiendas||null);
+      VAL_ULT_ERR='';
+      await refrescarResumenValidacion();
+      progVal(null);
+    }catch(e){
+      VAL_ULT_ERR=String((e&&e.message)||e||'');
+      if(opts.silencioso)progVal(null);
+      else{progVal('⚠ No se pudo regenerar la validación (ver pestaña Validación)',true);setTimeout(()=>progVal(null),7000);}
+      if(PAGE===4)pintarValidacion();
+      throw e;
+    }
+  };
+  const p=VAL_COLA.catch(()=>{}).then(tarea);
+  VAL_COLA=p.catch(()=>{});
+  return p;
+}
+// Trae el resumen de validación ya calculado y repinta lo que depende de él (consulta liviana)
+async function refrescarResumenValidacion(){
+  const {data,error}=await SB.rpc('validar_resumen');
+  if(error)throw error;
+  VALID_CACHE=data||[];
+  VALID_MAP={};VALID_CACHE.forEach(x=>VALID_MAP[x.pais+'|'+x.empresa+'|'+x.canal]=x);
+  rebuildDATA();render();
+  if(PAGE===4)pintarValidacion();
+  if(PAGE===5)renderObjetivos();
 }
 
 // ===== Pestaña Validación por título =====
+function msgErrValidacion(msg){
+  const noExiste=/does not exist|could not find|schema cache|PGRST202/i.test(msg);
+  return noExiste
+    ? `⚠ El panel no encuentra las funciones de validación en Supabase.<br>
+       <b>1)</b> Verifica que corriste <b>objetivos_semana.sql</b> y <b>validacion_titulos.sql</b> completos (sin errores).<br>
+       <b>2)</b> Si ya los corriste, ejecuta esto en el SQL Editor para refrescar la API:<br>
+       <code>notify pgrst, 'reload schema';</code><br>
+       <span class="dim">Detalle técnico: ${msg}</span>`
+    : `No se pudo regenerar la validación: ${msg}`;
+}
+// force=true: regenera todo ahora (botón ↻). force=false: solo consulta el resumen guardado.
 async function cargarValidacion(force){
-  if(force)VALID_CACHE=null;
   const st=document.getElementById('valStatus'),ct=document.getElementById('valTabla');
-  st.className='covstat warn';st.textContent=force?'Recalculando validación…':'Consultando validación por título…';ct.innerHTML='';
-  if(force){
-    try{
-      await SB.rpc('refrescar_objetivos');
-      await recalcularValidacion();
-    }catch(e){
-      prog(null);
-      const msg=String(e.message||e||'');
-      const noExiste=/does not exist|could not find|schema cache|PGRST202/i.test(msg);
-      st.innerHTML=noExiste
-        ? `⚠ El panel no encuentra las funciones de validación en Supabase.<br>
-           <b>1)</b> Verifica que corriste <b>objetivos_semana.sql</b> completo (sin errores).<br>
-           <b>2)</b> Si ya lo corriste, ejecuta esto en el SQL Editor para refrescar la API:<br>
-           <code>notify pgrst, 'reload schema';</code><br>
-           <span class="dim">Detalle técnico: ${msg}</span>`
-        : `No se pudo recalcular: ${msg}`;
-      return;
-    }
-  }
-  const {data,error}=await SB.rpc('validar_resumen');
-  if(error){
-    st.innerHTML=/does not exist|schema cache|function/i.test(error.message||'')
-      ?'⚠ Falta correr <b>validacion_titulos.sql</b> en Supabase (SQL Editor) para habilitar esta pestaña.'
-      :'Error: '+error.message;
+  st.className='covstat warn';st.textContent=force?'Regenerando validación…':'Consultando validación por título…';ct.innerHTML='';
+  try{
+    if(force)await regenerarValidacion(null,{objetivos:true,silencioso:true});
+    else await refrescarResumenValidacion();
+  }catch(e){
+    st.innerHTML=msgErrValidacion(String((e&&e.message)||e||''));
     return;
   }
-  VALID_CACHE=data||[];
-  VALID_MAP={};VALID_CACHE.forEach(x=>VALID_MAP[x.pais+'|'+x.empresa+'|'+x.canal]=x);
-  rebuildDATA();renderKPIs();renderPaises();renderTabla();  // refresca Detalle por plataforma
+  pintarValidacion();
+}
+function pintarValidacion(){
+  const st=document.getElementById('valStatus'),ct=document.getElementById('valTabla');
+  if(!VALID_CACHE){st.className='covstat warn';st.innerHTML=VAL_ULT_ERR?msgErrValidacion(VAL_ULT_ERR):'Consultando validación por título…';return;}
   if(!VALID_CACHE.length){
+    st.className='covstat warn';
     st.innerHTML='Sin datos de títulos aún. El admin debe <b>recargar la matriz</b> y el equipo <b>resubir las publicaciones</b> (el Excel debe traer la columna de título).';
+    ct.innerHTML='';
     return;
   }
   const tp=VALID_CACHE.reduce((s,r)=>s+ +r.publicadas,0),tc=VALID_CACHE.reduce((s,r)=>s+ +r.cumplen,0),tf=VALID_CACHE.reduce((s,r)=>s+ +r.fuera,0);
@@ -1964,8 +1753,9 @@ async function cargarValidacion(force){
   if(alto.length)aviso+=`<br><b style="color:var(--rojo)">⚠ Objetivo inflado en: ${alto.map(s=>`${s.emp} (${fmt(s.obj)} vs ${fmt(s.mp)} con precio)`).join(' · ')}</b>.
      Su matriz tiene títulos en varios idiomas <b>sin</b> el mismo <b>SKU Único por Familia</b>, así que el mismo listing se cuenta una vez por idioma.
      Llena esa columna en el Excel (el mismo ID para el título EN y su traducción) y recarga la matriz.`;
-  st.innerHTML=`✓ Todos los canales de la cobertura. Objetivo de la red: <b>${fmt(tobj)}</b> publicaciones · hoy <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de política (de ${fmt(tp)} títulos cargados). Las tiendas «sin títulos» aún no han subido publicaciones con título.${aviso}`;
-  if(sosp.length)st.className='covstat warn';
+  st.innerHTML=`✓ Todos los canales de la cobertura. Objetivo de la red: <b>${fmt(tobj)}</b> publicaciones · hoy <b>${fmt(tc)}</b> cumplen la matriz · <b>${fmt(tf)}</b> fuera de política (de ${fmt(tp)} títulos cargados). Las tiendas «sin títulos» aún no han subido publicaciones con título.${aviso}`
+    +(VAL_ULT_ERR?`<br><b style="color:var(--rojo)">⚠ La última regeneración falló y estas cifras pueden estar desactualizadas:</b> ${VAL_ULT_ERR}`:'');
+  if(sosp.length||VAL_ULT_ERR)st.className='covstat warn';
   let h='<table class="mat" style="min-width:820px"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th title="Publicaciones que debe tener según la matriz (con precio)">Pub. objetivo</th><th title="Listings cargados de esta tienda">Publicadas</th><th title="Publicaciones de la matriz efectivamente cubiertas (sin doble conteo)">Cumplen</th><th>% vs objetivo</th><th title="Listings cuyo título no está en la matriz">Fuera de matriz</th><th title="Listings que repiten un título ya contado">Duplicados</th><th title="Objetivo − Cumplen">Títulos faltantes</th><th>Detalle</th></tr></thead><tbody>';
   let pais0=null;
   VALID_CACHE.forEach((r,i)=>{
@@ -2036,28 +1826,24 @@ function rebuildDATA(){
   DATA=out;
 }
 async function cargarTodo(){
-  const [mz,cob,pub]=await Promise.all([
+  // Todas las consultas en UNA sola tanda paralela (antes iban en cadena).
+  // Las de validación y objetivos son opcionales: si su tabla/función no existe, no bloquean.
+  const opc=q=>Promise.resolve(q).catch(e=>({error:e}));
+  const [mz,cob,pub,val,ot,op]=await Promise.all([
     SB.from('matriz').select('*'),
     SB.from('cobertura').select('*'),
-    SB.from('publicaciones').select('*')
+    SB.from('publicaciones').select('*'),
+    opc(SB.rpc('validar_resumen')),
+    opc(SB.from('objetivos_tienda').select('*')),
+    opc(SB.from('objetivos_pers').select('*').order('id'))
   ]);
   const err=mz.error||cob.error||pub.error;
   if(err){alert('Error cargando datos: '+err.message);return}
   MATRIZ_AGG={};(mz.data||[]).forEach(m=>MATRIZ_AGG[m.empresa]={pub:m.pub,sku:m.sku,lineas:m.lineas||{}});
   COBROWS=cob.data||[]; PUBROWS=pub.data||[];
-  // Validación por título (para columna/resumen de "fuera de política"). Silencioso si aún no existe.
-  try{const v=await SB.rpc('validar_resumen');if(!v.error){VALID_CACHE=v.data||[];VALID_MAP={};VALID_CACHE.forEach(r=>VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal]=r);}}catch(e){}
-  // Objetivos semanales (pestaña Objetivos + PDF). Silencioso si las tablas no existen.
-  try{
-    const [ot,op]=await Promise.all([SB.from('objetivos_tienda').select('*'),SB.from('objetivos_pers').select('*').order('id')]);
-    OBJ_MAP={};if(!ot.error)(ot.data||[]).forEach(o=>OBJ_MAP[o.pais+'|'+o.empresa+'|'+o.canal]=o);
-    CUSTOM_OBJS=op.error?[]:(op.data||[]);
-  }catch(e){}
-  // Ventas y objetivos de venta (silencioso si aún no existen las tablas)
-  try{
-    const [v,vo]=await Promise.all([SB.from('ventas').select('*'),SB.from('ventas_objetivo').select('*')]);
-    VENTAS=v.error?[]:(v.data||[]); VOBJ=vo.error?[]:(vo.data||[]);
-  }catch(e){}
+  if(!val.error){VALID_CACHE=val.data||[];VALID_MAP={};VALID_CACHE.forEach(r=>VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal]=r);}
+  OBJ_MAP={};if(!ot.error)(ot.data||[]).forEach(o=>OBJ_MAP[o.pais+'|'+o.empresa+'|'+o.canal]=o);
+  CUSTOM_OBJS=op.error?[]:(op.data||[]);
   rebuildDATA(); render();
 }
 // Upsert tolerante: si la columna 'lineas' aún no existe en la base, guarda sin ella y avisa.
@@ -2085,12 +1871,13 @@ async function guardarMatriz(filas,titulos,aviso){
         if(del.error)throw del.error;
         await subirEnLotes('matriz_titulos',titulos,1000,'Subiendo títulos');
         VALID_CACHE=null;
-        try{
-          prog('Actualizando objetivos por empresa…');
-          await SB.rpc('refrescar_objetivos');
-          await recalcularValidacion();
-        }catch(e3){}
-        msgTit=`\n${fmt(titulos.length)} títulos guardados y validación recalculada.`;
+        prog(null);
+        let errVal='';
+        try{await regenerarValidacion(null,{objetivos:true,silencioso:true});}
+        catch(e3){errVal=String(e3.message||e3);}
+        msgTit=errVal
+          ?`\n${fmt(titulos.length)} títulos guardados, pero la validación falló: ${errVal}`
+          :`\n${fmt(titulos.length)} títulos guardados y validación regenerada.`;
       }catch(e2){
         msgTit=/does not exist|schema cache/i.test(e2.message||'')
           ?'\n⚠ Títulos NO guardados: falta correr validacion_titulos.sql en Supabase.'
@@ -2098,12 +1885,13 @@ async function guardarMatriz(filas,titulos,aviso){
       }finally{prog(null);}
     }
     await cargarTodo();
+    if(PAGE===4)pintarValidacion();
     const tp=filas.reduce((a,b)=>a+b.pub,0);
     const det=filas.slice().sort((a,b)=>a.empresa.localeCompare(b.empresa))
       .map(f=>`${f.empresa}: ${fmt(f.pub)} pub / ${fmt(f.sku)} SKU`).join('\n');
     const ajP=window.__ajustePrecio||0;
     const notaP=ajP?`\n${fmt(ajP)} título(s) de otro idioma heredaron el precio de su listing (columna "Tiene Precio" desactualizada en esa hoja).`:'';
-    alert(`✓ Matriz guardada — ${filas.length} empresas · ${fmt(tp)} publicaciones con precio.\n\n${det}${msgTit}${notaP}${aviso||''}`);
+    alert(`✓ Matriz guardada — ${filas.length} empresa(s) · ${fmt(tp)} publicaciones objetivo.\n\n${det}${msgTit}${notaP}${aviso||''}`);
   }catch(e){prog(null);alert('No se pudo guardar la matriz: '+(e.message||e));}
 }
 function gatearUI(){
@@ -2124,7 +1912,9 @@ async function entrarApp(){
   if(ses)ses.innerHTML=`<b>${ME.email}</b> · ${esAdmin()?'Admin':'Usuario'}`;
   gatearUI();
   if(ME.paises&&ME.paises.length)FILT.pais=new Set(ME.paises); // filtro por defecto, no candado
-  await cargarTodo();
+  await cargarTodo();   // el panel se pinta YA con la última validación guardada…
+  // …y en segundo plano se regenera la validación completa; al terminar, el panel se refresca solo.
+  regenerarValidacion(null,{objetivos:true}).catch(()=>{});
 }
 async function doLogin(){
   const email=document.getElementById('liEmail').value.trim();
