@@ -281,8 +281,8 @@
   .kpi.k-ph{background:repeating-linear-gradient(135deg,#fff,#fff 10px,#F7F9FC 10px,#F7F9FC 20px)}
   .kpi.k-ph::before{background:var(--neutro)}
   .kpi.k-ph .k-val{color:var(--neutro);font-size:24px;margin-top:10px}
-  .canal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
-  .canal-card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:15px 16px}
+  .canal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .canal-card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:15px 16px;min-width:0;overflow:hidden}
   .canal-card .ct{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
   .canal-card .cn{font-family:'Barlow Condensed';font-weight:700;font-size:19px;color:var(--azul-tinta)}
   .canal-card .cp{font-family:'Barlow Condensed';font-weight:700;font-size:24px;line-height:1}
@@ -553,7 +553,7 @@
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Ventas vs meta por canal</h2><span class="hint" id="k6PerHint"></span></div>
+      <div class="sec-h"><h2>Ventas vs meta por país</h2><span class="hint" id="k6PerHint"></span></div>
       <div class="canal-grid" id="k6Canales"></div>
     </div>
 
@@ -2194,21 +2194,22 @@ function kpiRender(){
     +k(kc(p61),'Política 6 fotos + 1 video',p61==null?'—':p61+'<small>%</small>',t.medidas?`${fmt(t.cumplen)} de ${fmt(t.medidas)} publicaciones revisadas · 6 fotos ${kPct(t.fotos,t.medidas)}% · video ${kPct(t.video,t.medidas)}%`:'Sin archivo de fotos y video cargado');
   document.getElementById('k6PerHint').textContent=perTx+' · USD netos';
 
-  // Por canal
-  const porCanal={};
-  tiendas.forEach(r=>(porCanal[r.canal]=porCanal[r.canal]||[]).push(r));
-  const ordC=Object.keys(porCanal).sort((a,b)=>{const ia=CANALES.indexOf(a),ib=CANALES.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)});
-  document.getElementById('k6Canales').innerHTML=ordC.length?ordC.map(c=>{
-    const s=kpiSuma(porCanal[c]),p=kPct(s.ventas,s.meta),q=kPct(s.cumplen,s.medidas);
-    const uc=kUnidades(porCanal[c]),ucA=uc.filter(u=>u.activo).length;
-    const ur=uc.reduce((a,u)=>a+u.real,0),up=uc.reduce((a,u)=>a+u.pos,0);
+  // Ventas vs meta por país
+  const porPaisV={};
+  tiendas.forEach(r=>(porPaisV[r.pais]=porPaisV[r.pais]||[]).push(r));
+  const ordPV=Object.keys(porPaisV).sort((a,b)=>{const ia=ORD_PAIS.indexOf(a),ib=ORD_PAIS.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)});
+  document.getElementById('k6Canales').innerHTML=ordPV.length?ordPV.map(p=>{
+    const s=kpiSuma(porPaisV[p]),pm=kPct(s.ventas,s.meta),q=kPct(s.cumplen,s.medidas);
+    const up=UNI.filter(u=>u.pais===p),upA=up.filter(u=>u.activo).length;
+    const ur=up.reduce((a,u)=>a+u.real,0),ups=up.reduce((a,u)=>a+u.pos,0);
+    const c=pm==null?'var(--neutro)':col(pm);
     return `<div class="canal-card">
-      <div class="ct"><span class="cn">${kEsc(c)}</span><span class="cp" style="color:${p==null?'var(--neutro)':col(p)}">${p==null?'—':p+'%'}</span></div>
-      <div class="cv"><b>${kUSD(s.ventas)}</b> de ${kUSD(s.meta)}</div>
-      <div class="bar"><span style="width:${Math.min(100,p||0)}%;background:${p==null?'var(--neutro)':col(p)}"></span></div>
-      <div class="cl"><span>Pub. reales <b>${fmt(ur)}</b> / ${fmt(up)}</span>${pill(kPct(ur,up))}</div>
-      <div class="cl"><span>${TIENDAS_PROPIAS.includes(c)?'Países activos':'Empresas activas'} <b>${ucA}/${uc.length}</b></span><span>6+1 ${q==null?'<b>—</b>':pill(q)}</span></div>
-    </div>`}).join(''):'<div class="empty">Sin canales para el filtro elegido.</div>';
+      <div class="ct"><span class="cn"><span class="flag">${FLAGS[p]||''}</span> ${kEsc(p)}</span><span class="cp" style="color:${c}">${pm==null?'—':pm+'%'}</span></div>
+      <div class="cv"><b>${kUSD(s.ventas)}</b> ${s.meta?'de '+kUSD(s.meta):'· <i>sin meta cargada</i>'}</div>
+      <div class="bar"><span style="width:${Math.min(100,Math.max(0,pm||0))}%;background:${c}"></span></div>
+      <div class="cl" title="${fmt(ur)} reales de ${fmt(ups)} posibles"><span>Publicaciones</span>${pill(kPct(ur,ups))}</div>
+      <div class="cl"><span>Canales activos <b>${upA}/${up.length}</b></span><span>6+1 ${q==null?'<b>—</b>':pill(q)}</span></div>
+    </div>`}).join(''):'<div class="empty">Sin datos para el filtro elegido.</div>';
 
   // Activos por país · solo % (las cifras de reales y posibles van en el detalle de abajo)
   const ordP=[...new Set(UNI.map(u=>u.pais))];
