@@ -288,15 +288,19 @@
   .canal-card .cp{font-family:'Barlow Condensed';font-weight:700;font-size:24px;line-height:1}
   .canal-card .cv{font-size:12px;color:var(--gris);margin:4px 0 8px}
   .canal-card .cv b{color:var(--tinta);font-weight:600}
-  .canal-card .cl{display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--gris);margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
+  .canal-card .cl{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--gris);margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
   .canal-card .cl b{color:var(--tinta);font-weight:600}
-  .act-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .act-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
+  @media(max-width:420px){.act-grid{grid-template-columns:1fr}}
   .act-card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:13px 16px}
   .act-card .at{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
   .act-card .at .nm{font-family:'Barlow Condensed';font-weight:600;font-size:18px;color:var(--azul-tinta);display:flex;gap:8px;align-items:center}
   .act-card .at .ct{font-size:12px;color:var(--gris)}
   .act-card .at .ct b{color:var(--azul-tinta)}
   .chan-pills{display:flex;gap:6px;flex-wrap:wrap}
+  .act-line{display:grid;grid-template-columns:118px 1fr;gap:8px;align-items:start;padding:7px 0;border-top:1px solid var(--linea)}
+  .act-line .al{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--azul);padding-top:5px}
+  @media(max-width:420px){.act-line{grid-template-columns:1fr}.act-line .al{padding-top:0}}
   .chan-pill{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--linea);display:inline-flex;align-items:center;gap:6px}
   .chan-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
   .chan-pill.on{background:var(--verde-bg);color:var(--verde);border-color:#BFE6D5}
@@ -451,6 +455,7 @@
             <label><input type="checkbox" class="covcanal" value="Mercado Libre">Mercado Libre</label>
             <label><input type="checkbox" class="covcanal" value="Amazon">Amazon</label>
             <label><input type="checkbox" class="covcanal" value="eBay">eBay</label>
+            <label><input type="checkbox" class="covcanal" value="Xstore Shop">Xstore Shop</label>
             <label><input type="checkbox" class="covcanal" value="Camozzi Shop">Camozzi Shop</label>
           </div>
         </div>
@@ -544,7 +549,7 @@
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Verde = el canal tiene publicaciones cargadas · gris = está en Cobertura pero sin publicaciones</span></div>
+      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Marketplaces por <b>canal · empresa</b>; cada tienda propia cuenta como una. Verde = con publicaciones · gris = en Cobertura sin publicaciones</span></div>
       <div class="act-grid" id="k6Paises"></div>
     </div>
 
@@ -560,7 +565,7 @@
 
     <div class="note">
       <b>Cómo se calcula:</b><br>
-      • <b>Tienda activa</b> = país · empresa · canal con publicaciones cargadas (📦 Cargar publicaciones). El total sale de la pestaña Cobertura.<br>
+      • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b>, <b>Xstore Shop</b> (solo Estados Unidos) y <b>Camozzi Shop</b> (solo Venezuela y Colombia). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
       • <b>Ventas y meta</b> en USD netos, del Excel de ventas (AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO). Puede traer una sola hoja con ambas columnas, o hojas VENTAS y METAS separadas. Cargar un archivo <b>reemplaza los años que contiene</b>.<br>
       • <b>Acumulado a la fecha</b> suma de enero al mes en curso (la meta del mes en curso cuenta completa). En años pasados equivale al año completo.<br>
       • <b>Política 6 + 1</b> = publicaciones con <b>6 fotos o más</b> y <b>al menos 1 video</b>, sobre las publicaciones revisadas en el archivo de fotos y video (PAIS · EMPRESA · CANAL · SKU · FOTOS · VIDEO). Cargar un archivo reemplaza solo las tiendas que contiene.<br>
@@ -605,7 +610,11 @@
 // ===== Listas maestras =====
 const FLAGS={"México":"🇲🇽","Colombia":"🇨🇴","Estados Unidos":"🇺🇸","Brasil":"🇧🇷","Venezuela":"🇻🇪","España":"🇪🇸"};
 const ORD_PAIS=["México","Colombia","Estados Unidos","Brasil","Venezuela","España"];
-const CANALES=["Masia Shop","Mercado Libre","Amazon","eBay","Camozzi Shop"];
+const CANALES=["Masia Shop","Xstore Shop","Mercado Libre","Amazon","eBay","Camozzi Shop"];
+// Tiendas propias: cuentan como UNA unidad por país (no por empresa).
+const TIENDAS_PROPIAS=["Masia Shop","Xstore Shop","Camozzi Shop"];
+// Tiendas que solo existen en ciertos países
+const TIENDA_PAISES={"Xstore Shop":["Estados Unidos"],"Camozzi Shop":["Venezuela","Colombia"]};
 const EMPRESAS=["Masia Group","Masia Rentals","Masia Compressors","Xstore","Camozzi"];
 
 function f(pais,canal,empresa,smE,smA,skuPb,pmE,pmA,pub){return {pais,canal,empresa,smE,smA,skuPb,pmE,pmA,pub}}
@@ -949,6 +958,7 @@ function normCanal(v){const k=String(v==null?'':v).trim().toLowerCase();
   if(/mercado|meli/.test(k)||k==='ml')return 'Mercado Libre';
   if(/amazon|amz/.test(k))return 'Amazon';
   if(/ebay/.test(k))return 'eBay';
+  if(/xstore/.test(k)&&/shop|shopify|tienda|web/.test(k))return 'Xstore Shop';
   if(/camozzi/.test(k))return 'Camozzi Shop';
   if(/shop|shopify/.test(k))return 'Masia Shop';
   return String(v==null?'':v).trim();
@@ -1090,7 +1100,7 @@ function detectarPCE(name){
   if(/mercado ?libre|meli|mlib/.test(n)||tk('ml'))canal='Mercado Libre';
   else if(/amazon|amz/.test(n))canal='Amazon';
   else if(/ebay/.test(n))canal='eBay';
-  else if(/shopify|shop/.test(n))canal=camozzi?'Camozzi Shop':'Masia Shop';
+  else if(/shopify|shop/.test(n))canal=camozzi?'Camozzi Shop':(/xstore/.test(n)?'Xstore Shop':'Masia Shop');
   let empresa='';
   if(camozzi)empresa='Camozzi';
   else if(/rentals?/.test(n))empresa='Masia Rentals';
@@ -1429,7 +1439,10 @@ async function agregarCobertura(){
   const empresa=document.getElementById('covEmp').value;
   const canales=[...document.querySelectorAll('.covcanal:checked')].map(c=>c.value);
   if(!pais||!empresa||!canales.length){alert('Elige país, empresa y al menos un canal.');return}
-  const filas=canales.map(canal=>({pais,empresa,canal}));
+  const fuera=canales.filter(c=>TIENDA_PAISES[c]&&!TIENDA_PAISES[c].includes(pais));
+  const filas=canales.filter(c=>!fuera.includes(c)).map(canal=>({pais,empresa,canal}));
+  if(fuera.length)alert(fuera.map(c=>`${c} solo opera en ${TIENDA_PAISES[c].join(' y ')}: no se agrega en ${pais}.`).join('\n'));
+  if(!filas.length)return;
   try{
     const {error}=await SB.from('cobertura').upsert(filas,{onConflict:'pais,empresa,canal',ignoreDuplicates:true});
     if(error)throw error;
@@ -2121,6 +2134,21 @@ function kpiModelo(){
     ||a.empresa.localeCompare(b.empresa)||CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal));
   return {rows,anio,per,meses:[...meses].sort((a,b)=>a-b),pais};
 }
+const ORD_EMP=['Masia Group','Masia Compressors','Masia Rentals','Xstore','Camozzi'];
+const kOrdEmp=e=>{const i=ORD_EMP.indexOf(e);return i<0?99:i};
+// Unidad a medir: marketplaces = canal · empresa; tiendas propias = una por país.
+function kUnidades(rows){
+  const U={};
+  rows.filter(r=>r.cob||r.activo).forEach(r=>{
+    if(TIENDA_PAISES[r.canal]&&!TIENDA_PAISES[r.canal].includes(r.pais))return;
+    const propia=TIENDAS_PROPIAS.includes(r.canal);
+    const id=propia?r.pais+'|'+r.canal:kKey(r.pais,r.empresa,r.canal);
+    const u=U[id]=U[id]||{pais:r.pais,canal:r.canal,empresa:propia?null:r.empresa,propia,activo:false};
+    u.activo=u.activo||r.activo;
+  });
+  return Object.values(U).sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)
+    ||CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal)||kOrdEmp(a.empresa)-kOrdEmp(b.empresa)||String(a.empresa).localeCompare(String(b.empresa)));
+}
 function kpiSuma(rows){
   const t={ventas:0,meta:0,medidas:0,fotos:0,video:0,cumplen:0,act:0,cob:0,pub:0};
   rows.forEach(r=>{t.ventas+=r.ventas;t.meta+=r.meta;t.pub+=r.pub;
@@ -2138,14 +2166,13 @@ function kpiRender(){
   const tiendas=rows.filter(r=>r.cob||r.activo||r.ventas||r.meta||r.med);
   const t=kpiSuma(tiendas);
   const pM=kPct(t.ventas,t.meta), p61=kPct(t.cumplen,t.medidas);
-  const pAct=kPct(t.act,t.tiendas);
-  const canalesAct=new Set(tiendas.filter(r=>r.activo).map(r=>r.pais+'|'+r.canal)).size;
-  const canalesTot=new Set(tiendas.filter(r=>r.cob||r.activo).map(r=>r.pais+'|'+r.canal)).size;
+  const UNI=kUnidades(tiendas);
+  const uAct=UNI.filter(u=>u.activo).length, uTot=UNI.length;
   const perTx=kpiPerTexto(anio,per,meses);
   const k=(c,lab,val,sub,money)=>`<div class="kpi ${c}"><div class="k-lab">${lab}</div><div class="k-val${money?' money':''}">${val}</div><div class="k-sub">${sub}</div></div>`;
   const kc=p=>p==null?'is-n':p>=90?'is-g':p>=75?'is-y':'is-r';
   document.getElementById('k6Kpis').innerHTML=
-     k(kc(pAct),'Canales publicados y activos',`${canalesAct}<small> / ${canalesTot}</small>`,`${t.act} de ${t.tiendas} tiendas (país·empresa·canal) con publicaciones`)
+     k(kc(kPct(uAct,uTot)),'Canales publicados y activos',`${uAct}<small> / ${uTot}</small>`,`${kPct(uAct,uTot)??0}% · combinaciones canal·empresa con publicaciones (cada tienda propia cuenta como una)`)
     +k('k-blue','Ventas · '+perTx,kUSD(t.ventas),t.ventas||t.meta?'USD netos':'Sin ventas cargadas para este período',true)
     +k('k-amb','Meta · '+perTx,kUSD(t.meta),t.meta?'USD':'Sin metas cargadas para este período',true)
     +k(kc(pM),'% cumplimiento vs meta',pM==null?'—':pM+'<small>%</small>',pM==null?'Falta la meta del período':`Faltan ${kUSD(Math.max(0,t.meta-t.ventas))} para la meta`)
@@ -2159,22 +2186,24 @@ function kpiRender(){
   const ordC=Object.keys(porCanal).sort((a,b)=>{const ia=CANALES.indexOf(a),ib=CANALES.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)});
   document.getElementById('k6Canales').innerHTML=ordC.length?ordC.map(c=>{
     const s=kpiSuma(porCanal[c]),p=kPct(s.ventas,s.meta),q=kPct(s.cumplen,s.medidas);
+    const uc=kUnidades(porCanal[c]),ucA=uc.filter(u=>u.activo).length;
     return `<div class="canal-card">
       <div class="ct"><span class="cn">${kEsc(c)}</span><span class="cp" style="color:${p==null?'var(--neutro)':col(p)}">${p==null?'—':p+'%'}</span></div>
       <div class="cv"><b>${kUSD(s.ventas)}</b> de ${kUSD(s.meta)}</div>
       <div class="bar"><span style="width:${Math.min(100,p||0)}%;background:${p==null?'var(--neutro)':col(p)}"></span></div>
-      <div class="cl"><span>Tiendas activas <b>${s.act}/${s.tiendas}</b></span><span>6+1 ${q==null?'<b>—</b>':pill(q)}</span></div>
+      <div class="cl"><span>${TIENDAS_PROPIAS.includes(c)?'Países activos':'Empresas activas'} <b>${ucA}/${uc.length}</b></span><span>6+1 ${q==null?'<b>—</b>':pill(q)}</span></div>
     </div>`}).join(''):'<div class="empty">Sin canales para el filtro elegido.</div>';
 
   // Activos por país
-  const porPais={};
-  tiendas.filter(r=>r.cob||r.activo).forEach(r=>{const o=(porPais[r.pais]=porPais[r.pais]||{});o[r.canal]=o[r.canal]||r.activo;});
-  const ordP=Object.keys(porPais).sort((a,b)=>ORD_PAIS.indexOf(a)-ORD_PAIS.indexOf(b));
+  const ordP=[...new Set(UNI.map(u=>u.pais))];
+  const pillU=(u,txt)=>`<span class="chan-pill ${u.activo?'on':'off'}" title="${kEsc(u.canal+(u.empresa?' · '+u.empresa:''))}">${kEsc(txt)}</span>`;
   document.getElementById('k6Paises').innerHTML=ordP.length?ordP.map(p=>{
-    const cs=Object.keys(porPais[p]).sort((a,b)=>CANALES.indexOf(a)-CANALES.indexOf(b));
-    const on=cs.filter(c=>porPais[p][c]).length;
-    return `<div class="act-card"><div class="at"><span class="nm"><span class="flag">${FLAGS[p]||''}</span>${kEsc(p)}</span><span class="ct"><b>${on}</b> de ${cs.length} canales activos</span></div>
-      <div class="chan-pills">${cs.map(c=>`<span class="chan-pill ${porPais[p][c]?'on':'off'}">${kEsc(c)}</span>`).join('')}</div></div>`}).join('')
+    const us=UNI.filter(u=>u.pais===p),on=us.filter(u=>u.activo).length;
+    const props=us.filter(u=>u.propia);
+    const mkts=[...new Set(us.filter(u=>!u.propia).map(u=>u.canal))];
+    let lines=mkts.map(c=>`<div class="act-line"><span class="al">${kEsc(c)}</span><div class="chan-pills">${us.filter(u=>!u.propia&&u.canal===c).map(u=>pillU(u,u.empresa)).join('')}</div></div>`).join('');
+    if(props.length)lines+=`<div class="act-line"><span class="al">Tiendas propias</span><div class="chan-pills">${props.map(u=>pillU(u,u.canal)).join('')}</div></div>`;
+    return `<div class="act-card"><div class="at"><span class="nm"><span class="flag">${FLAGS[p]||''}</span>${kEsc(p)}</span><span class="ct"><b>${on}</b> de ${us.length} activos</span></div>${lines}</div>`}).join('')
     :'<div class="empty">Define tiendas en la pestaña Cobertura o carga publicaciones.</div>';
 
   // Detalle
