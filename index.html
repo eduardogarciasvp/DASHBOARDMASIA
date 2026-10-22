@@ -288,7 +288,8 @@
   .canal-card .cp{font-family:'Barlow Condensed';font-weight:700;font-size:24px;line-height:1}
   .canal-card .cv{font-size:12px;color:var(--gris);margin:4px 0 8px}
   .canal-card .cv b{color:var(--tinta);font-weight:600}
-  .canal-card .cl{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--gris);margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
+  .canal-card .pillpct{min-width:0;font-size:11px;padding:2px 7px}
+  .canal-card .cl{display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--gris);margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
   .canal-card .cl b{color:var(--tinta);font-weight:600}
   .act-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
   @media(max-width:420px){.act-grid{grid-template-columns:1fr}}
@@ -298,6 +299,15 @@
   .act-card .at .ct{font-size:12px;color:var(--gris)}
   .act-card .at .ct b{color:var(--azul-tinta)}
   .chan-pills{display:flex;gap:6px;flex-wrap:wrap}
+  table.act-tbl{min-width:0;font-size:12.5px}
+  table.act-tbl thead th{position:static;background:none;color:var(--gris);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--linea)}
+  table.act-tbl td{padding:5px 6px;white-space:nowrap}
+  table.act-tbl td.l{white-space:normal}
+  table.act-tbl tr.ag td{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--azul);background:var(--papel);text-align:left;padding:5px 6px}
+  table.act-tbl tr.at-tot td{font-weight:700;color:var(--azul-tinta);border-top:2px solid var(--azul);border-bottom:none}
+  table.act-tbl .pillpct{min-width:44px;font-size:11px;padding:2px 6px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+  .dot.on{background:var(--verde)} .dot.off{background:#C4CAD4}
   .act-line{display:grid;grid-template-columns:118px 1fr;gap:8px;align-items:start;padding:7px 0;border-top:1px solid var(--linea)}
   .act-line .al{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--azul);padding-top:5px}
   @media(max-width:420px){.act-line{grid-template-columns:1fr}.act-line .al{padding-top:0}}
@@ -549,7 +559,7 @@
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Marketplaces por <b>canal · empresa</b>; cada tienda propia cuenta como una. Verde = con publicaciones · gris = en Cobertura sin publicaciones</span></div>
+      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Marketplaces por <b>canal · empresa</b>; cada tienda propia cuenta como una. ● verde = con publicaciones · ● gris = en Cobertura sin publicaciones. <b>Reales</b> = publicaciones que cumplen la matriz · <b>Posibles</b> = publicaciones de la matriz.</span></div>
       <div class="act-grid" id="k6Paises"></div>
     </div>
 
@@ -560,12 +570,13 @@
 
     <div class="sec">
       <div class="sec-h"><h2>Stock y publicaciones posibles</h2></div>
-      <div class="stock-ph"><b>Fase 2 · conexión con el ERP.</b> Aquí irán los productos en stock por país y cuántas publicaciones se podrían hacer en cada canal con ese stock (SKUs con existencia × canales donde la matriz dice que deben estar).</div>
+      <div class="stock-ph"><b>Fase 2 · conexión con el ERP.</b> Aquí irán los productos en stock por país, y las publicaciones reales se compararán también contra las posibles <b>con stock</b> (no solo contra la matriz).</div>
     </div>
 
     <div class="note">
       <b>Cómo se calcula:</b><br>
       • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b>, <b>Xstore Shop</b> (solo Estados Unidos) y <b>Camozzi Shop</b> (solo Venezuela y Colombia). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
+      • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de la pestaña Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas.<br>
       • <b>Ventas y meta</b> en USD netos, del Excel de ventas (AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO). Puede traer una sola hoja con ambas columnas, o hojas VENTAS y METAS separadas. Cargar un archivo <b>reemplaza los años que contiene</b>.<br>
       • <b>Acumulado a la fecha</b> suma de enero al mes en curso (la meta del mes en curso cuenta completa). En años pasados equivale al año completo.<br>
       • <b>Política 6 + 1</b> = publicaciones con <b>6 fotos o más</b> y <b>al menos 1 video</b>, sobre las publicaciones revisadas en el archivo de fotos y video (PAIS · EMPRESA · CANAL · SKU · FOTOS · VIDEO). Cargar un archivo reemplaza solo las tiendas que contiene.<br>
@@ -2121,9 +2132,12 @@ function kpiModelo(){
   const per=document.getElementById('k6Per').value;
   const meses=new Set(kpiMeses(anio,per));
   const M={};
-  const get=(p,e,c)=>{const k=kKey(p,e,c);return M[k]=M[k]||{pais:p,empresa:e,canal:c,cob:false,pub:0,ventas:0,meta:0,med:null}};
+  const get=(p,e,c)=>{const k=kKey(p,e,c);return M[k]=M[k]||{pais:p,empresa:e,canal:c,cob:false,pub:0,real:0,pos:0,ventas:0,meta:0,med:null}};
   COBROWS.forEach(c=>get(c.pais,c.empresa,c.canal).cob=true);
   PUBROWS.forEach(p=>{get(p.pais,p.empresa,p.canal).pub+=(p.pub||0)});
+  // Reales = publicaciones que cumplen la matriz · Posibles = publicaciones de la matriz (deber ser)
+  // (mismos números que la pestaña Detalle por plataforma)
+  DATA.forEach(d=>{const r=get(d.pais,d.empresa,d.canal);r.real=d.pub||0;r.pos=pubMz(d)||0;});
   KPI.ventas.forEach(v=>{if(v.anio!==anio||!meses.has(v.mes))return;
     const r=get(v.pais,v.empresa,v.canal);r.ventas+=+v.facturacion||0;r.meta+=+v.objetivo||0;});
   KPI.medios.forEach(m=>get(m.pais,m.empresa,m.canal).med=m);
@@ -2131,7 +2145,7 @@ function kpiModelo(){
   if(pais)rows=rows.filter(r=>r.pais===pais);
   rows.forEach(r=>{r.activo=r.pub>0;r.estado=r.activo?'on':(r.cob?'off':'nc');});
   rows.sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)
-    ||a.empresa.localeCompare(b.empresa)||CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal));
+    ||kOrdEmp(a.empresa)-kOrdEmp(b.empresa)||a.empresa.localeCompare(b.empresa)||CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal));
   return {rows,anio,per,meses:[...meses].sort((a,b)=>a-b),pais};
 }
 const ORD_EMP=['Masia Group','Masia Compressors','Masia Rentals','Xstore','Camozzi'];
@@ -2143,15 +2157,15 @@ function kUnidades(rows){
     if(TIENDA_PAISES[r.canal]&&!TIENDA_PAISES[r.canal].includes(r.pais))return;
     const propia=TIENDAS_PROPIAS.includes(r.canal);
     const id=propia?r.pais+'|'+r.canal:kKey(r.pais,r.empresa,r.canal);
-    const u=U[id]=U[id]||{pais:r.pais,canal:r.canal,empresa:propia?null:r.empresa,propia,activo:false};
-    u.activo=u.activo||r.activo;
+    const u=U[id]=U[id]||{pais:r.pais,canal:r.canal,empresa:propia?null:r.empresa,propia,activo:false,real:0,pos:0};
+    u.activo=u.activo||r.activo;u.real+=r.real;u.pos+=r.pos;
   });
   return Object.values(U).sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)
     ||CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal)||kOrdEmp(a.empresa)-kOrdEmp(b.empresa)||String(a.empresa).localeCompare(String(b.empresa)));
 }
 function kpiSuma(rows){
-  const t={ventas:0,meta:0,medidas:0,fotos:0,video:0,cumplen:0,act:0,cob:0,pub:0};
-  rows.forEach(r=>{t.ventas+=r.ventas;t.meta+=r.meta;t.pub+=r.pub;
+  const t={ventas:0,meta:0,medidas:0,fotos:0,video:0,cumplen:0,act:0,cob:0,pub:0,real:0,pos:0};
+  rows.forEach(r=>{t.ventas+=r.ventas;t.meta+=r.meta;t.pub+=r.pub;t.real+=r.real;t.pos+=r.pos;
     if(r.cob)t.cob++;if(r.activo)t.act++;
     if(r.med){t.medidas+=r.med.medidas;t.fotos+=r.med.con_fotos;t.video+=r.med.con_video;t.cumplen+=r.med.cumplen;}});
   t.tiendas=rows.filter(r=>r.cob||r.activo).length;
@@ -2168,16 +2182,17 @@ function kpiRender(){
   const pM=kPct(t.ventas,t.meta), p61=kPct(t.cumplen,t.medidas);
   const UNI=kUnidades(tiendas);
   const uAct=UNI.filter(u=>u.activo).length, uTot=UNI.length;
+  const uReal=UNI.reduce((a,u)=>a+u.real,0), uPos=UNI.reduce((a,u)=>a+u.pos,0), pPub=kPct(uReal,uPos);
   const perTx=kpiPerTexto(anio,per,meses);
   const k=(c,lab,val,sub,money)=>`<div class="kpi ${c}"><div class="k-lab">${lab}</div><div class="k-val${money?' money':''}">${val}</div><div class="k-sub">${sub}</div></div>`;
   const kc=p=>p==null?'is-n':p>=90?'is-g':p>=75?'is-y':'is-r';
   document.getElementById('k6Kpis').innerHTML=
      k(kc(kPct(uAct,uTot)),'Canales publicados y activos',`${uAct}<small> / ${uTot}</small>`,`${kPct(uAct,uTot)??0}% · combinaciones canal·empresa con publicaciones (cada tienda propia cuenta como una)`)
+    +k(kc(pPub),'Publicaciones reales vs posibles',pPub==null?'—':pPub+'<small>%</small>',uPos?`${fmt(uReal)} reales de ${fmt(uPos)} posibles según la matriz`:'Sin matriz cargada')
     +k('k-blue','Ventas · '+perTx,kUSD(t.ventas),t.ventas||t.meta?'USD netos':'Sin ventas cargadas para este período',true)
     +k('k-amb','Meta · '+perTx,kUSD(t.meta),t.meta?'USD':'Sin metas cargadas para este período',true)
     +k(kc(pM),'% cumplimiento vs meta',pM==null?'—':pM+'<small>%</small>',pM==null?'Falta la meta del período':`Faltan ${kUSD(Math.max(0,t.meta-t.ventas))} para la meta`)
-    +k(kc(p61),'Política 6 fotos + 1 video',p61==null?'—':p61+'<small>%</small>',t.medidas?`${fmt(t.cumplen)} de ${fmt(t.medidas)} publicaciones revisadas · 6 fotos ${kPct(t.fotos,t.medidas)}% · video ${kPct(t.video,t.medidas)}%`:'Sin archivo de fotos y video cargado')
-    +`<div class="kpi k-ph"><div class="k-lab">Productos en stock</div><div class="k-val">Fase 2 · ERP</div><div class="k-sub">Stock por país y publicaciones posibles por canal</div></div>`;
+    +k(kc(p61),'Política 6 fotos + 1 video',p61==null?'—':p61+'<small>%</small>',t.medidas?`${fmt(t.cumplen)} de ${fmt(t.medidas)} publicaciones revisadas · 6 fotos ${kPct(t.fotos,t.medidas)}% · video ${kPct(t.video,t.medidas)}%`:'Sin archivo de fotos y video cargado');
   document.getElementById('k6PerHint').textContent=perTx+' · USD netos';
 
   // Por canal
@@ -2187,23 +2202,28 @@ function kpiRender(){
   document.getElementById('k6Canales').innerHTML=ordC.length?ordC.map(c=>{
     const s=kpiSuma(porCanal[c]),p=kPct(s.ventas,s.meta),q=kPct(s.cumplen,s.medidas);
     const uc=kUnidades(porCanal[c]),ucA=uc.filter(u=>u.activo).length;
+    const ur=uc.reduce((a,u)=>a+u.real,0),up=uc.reduce((a,u)=>a+u.pos,0);
     return `<div class="canal-card">
       <div class="ct"><span class="cn">${kEsc(c)}</span><span class="cp" style="color:${p==null?'var(--neutro)':col(p)}">${p==null?'—':p+'%'}</span></div>
       <div class="cv"><b>${kUSD(s.ventas)}</b> de ${kUSD(s.meta)}</div>
       <div class="bar"><span style="width:${Math.min(100,p||0)}%;background:${p==null?'var(--neutro)':col(p)}"></span></div>
+      <div class="cl"><span>Pub. reales <b>${fmt(ur)}</b> / ${fmt(up)}</span>${pill(kPct(ur,up))}</div>
       <div class="cl"><span>${TIENDAS_PROPIAS.includes(c)?'Países activos':'Empresas activas'} <b>${ucA}/${uc.length}</b></span><span>6+1 ${q==null?'<b>—</b>':pill(q)}</span></div>
     </div>`}).join(''):'<div class="empty">Sin canales para el filtro elegido.</div>';
 
-  // Activos por país
+  // Activos por país · con publicaciones reales vs posibles
   const ordP=[...new Set(UNI.map(u=>u.pais))];
-  const pillU=(u,txt)=>`<span class="chan-pill ${u.activo?'on':'off'}" title="${kEsc(u.canal+(u.empresa?' · '+u.empresa:''))}">${kEsc(txt)}</span>`;
+  const filaU=(u,txt)=>`<tr><td class="l"><span class="dot ${u.activo?'on':'off'}"></span>${kEsc(txt)}</td><td>${fmt(u.real)}</td><td class="dim">${fmt(u.pos)}</td><td>${pill(kPct(u.real,u.pos))}</td></tr>`;
   document.getElementById('k6Paises').innerHTML=ordP.length?ordP.map(p=>{
     const us=UNI.filter(u=>u.pais===p),on=us.filter(u=>u.activo).length;
+    const r=us.reduce((a,u)=>a+u.real,0),ps=us.reduce((a,u)=>a+u.pos,0);
     const props=us.filter(u=>u.propia);
     const mkts=[...new Set(us.filter(u=>!u.propia).map(u=>u.canal))];
-    let lines=mkts.map(c=>`<div class="act-line"><span class="al">${kEsc(c)}</span><div class="chan-pills">${us.filter(u=>!u.propia&&u.canal===c).map(u=>pillU(u,u.empresa)).join('')}</div></div>`).join('');
-    if(props.length)lines+=`<div class="act-line"><span class="al">Tiendas propias</span><div class="chan-pills">${props.map(u=>pillU(u,u.canal)).join('')}</div></div>`;
-    return `<div class="act-card"><div class="at"><span class="nm"><span class="flag">${FLAGS[p]||''}</span>${kEsc(p)}</span><span class="ct"><b>${on}</b> de ${us.length} activos</span></div>${lines}</div>`}).join('')
+    let body=mkts.map(c=>`<tr class="ag"><td colspan="4">${kEsc(c)}</td></tr>`+us.filter(u=>!u.propia&&u.canal===c).map(u=>filaU(u,u.empresa)).join('')).join('');
+    if(props.length)body+=`<tr class="ag"><td colspan="4">Tiendas propias</td></tr>`+props.map(u=>filaU(u,u.canal)).join('');
+    return `<div class="act-card"><div class="at"><span class="nm"><span class="flag">${FLAGS[p]||''}</span>${kEsc(p)}</span><span class="ct"><b>${on}</b> de ${us.length} activos</span></div>
+      <table class="act-tbl"><thead><tr><th class="l">Canal · empresa</th><th>Reales</th><th>Posibles</th><th>%</th></tr></thead><tbody>${body}
+      <tr class="at-tot"><td class="l">Total ${kEsc(p)}</td><td>${fmt(r)}</td><td>${fmt(ps)}</td><td>${pill(kPct(r,ps))}</td></tr></tbody></table></div>`}).join('')
     :'<div class="empty">Define tiendas en la pestaña Cobertura o carga publicaciones.</div>';
 
   // Detalle
@@ -2211,7 +2231,9 @@ function kpiRender(){
   const fila=(r)=>{const p=kPct(r.ventas,r.meta),m=r.med;
     return `<tr><td class="l">${kEsc(r.empresa)}</td><td class="l">${kEsc(r.canal)}</td>
       <td class="l"><span class="estado ${r.estado}">${EST[r.estado]}</span></td>
-      <td>${r.pub?fmt(r.pub):'<span class="dim">0</span>'}</td>
+      <td>${r.real?fmt(r.real):'<span class="dim">0</span>'}</td>
+      <td class="dim">${r.pos?fmt(r.pos):'—'}</td>
+      <td>${pill(kPct(r.real,r.pos))}</td>
       <td>${r.ventas?kUSD(r.ventas):'<span class="dim">—</span>'}</td>
       <td>${r.meta?kUSD(r.meta):'<span class="dim">—</span>'}</td>
       <td>${pill(p)}</td>
@@ -2219,13 +2241,13 @@ function kpiRender(){
       <td>${m?pill(kPct(m.con_video,m.medidas)):pill(null)}</td>
       <td>${m?pill(kPct(m.cumplen,m.medidas)):pill(null)}</td>
       <td class="dim">${m?fmt(m.medidas):'—'}</td></tr>`};
-  const sub=(lab,s,cls)=>`<tr class="${cls}"><td class="l" colspan="3">${lab}</td><td>${fmt(s.pub)}</td><td>${kUSD(s.ventas)}</td><td>${kUSD(s.meta)}</td>
+  const sub=(lab,s,cls)=>`<tr class="${cls}"><td class="l" colspan="3">${lab}</td><td>${fmt(s.real)}</td><td>${fmt(s.pos)}</td><td>${pill(kPct(s.real,s.pos))}</td><td>${kUSD(s.ventas)}</td><td>${kUSD(s.meta)}</td>
       <td>${pill(kPct(s.ventas,s.meta))}</td><td>${pill(kPct(s.fotos,s.medidas))}</td><td>${pill(kPct(s.video,s.medidas))}</td><td>${pill(kPct(s.cumplen,s.medidas))}</td><td>${s.medidas?fmt(s.medidas):'—'}</td></tr>`;
-  let h=`<table class="k6t"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th class="l">Estado</th><th>Publicaciones</th><th>Ventas</th><th>Meta</th><th>% Meta</th><th>6 fotos</th><th>Video</th><th>6 + 1</th><th>Revisadas</th></tr></thead><tbody>`;
-  if(!tiendas.length)h+='<tr><td colspan="11" class="empty">Sin datos para el filtro elegido.</td></tr>';
+  let h=`<table class="k6t"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th class="l">Estado</th><th>Pub. reales<span class="u">cumplen matriz</span></th><th>Pub. posibles<span class="u">matriz</span></th><th>% Pub.</th><th>Ventas</th><th>Meta</th><th>% Meta</th><th>6 fotos</th><th>Video</th><th>6 + 1</th><th>Revisadas</th></tr></thead><tbody>`;
+  if(!tiendas.length)h+='<tr><td colspan="13" class="empty">Sin datos para el filtro elegido.</td></tr>';
   ordP.concat(Object.keys(tiendas.reduce((o,r)=>(o[r.pais]=1,o),{})).filter(p=>!ordP.includes(p))).forEach(p=>{
     const rs=tiendas.filter(r=>r.pais===p);if(!rs.length)return;
-    h+=`<tr class="grp-row"><td colspan="11">${FLAGS[p]||''} ${kEsc(p)}</td></tr>`;
+    h+=`<tr class="grp-row"><td colspan="13">${FLAGS[p]||''} ${kEsc(p)}</td></tr>`;
     h+=rs.map(fila).join('');
     h+=sub('Total '+kEsc(p),kpiSuma(rs),'subrow');
   });
@@ -2389,7 +2411,8 @@ function kpiExcel(){
   const {rows,anio,per,meses}=kpiModelo();
   const EST={on:'Activa',off:'Sin publicaciones',nc:'Fuera de cobertura'};
   const out=rows.filter(r=>r.cob||r.activo||r.ventas||r.meta||r.med).map(r=>{const m=r.med;return {
-    'País':r.pais,'Empresa':r.empresa,'Canal':r.canal,'Estado':EST[r.estado],'Publicaciones':r.pub,
+    'País':r.pais,'Empresa':r.empresa,'Canal':r.canal,'Estado':EST[r.estado],'Publicaciones cargadas':r.pub,
+    'Pub. reales':r.real,'Pub. posibles (matriz)':r.pos,'% Pub.':kPct(r.real,r.pos),
     'Ventas USD':Math.round(r.ventas),'Meta USD':Math.round(r.meta),'% Meta':kPct(r.ventas,r.meta),
     'Revisadas 6+1':m?m.medidas:'','Con 6 fotos':m?m.con_fotos:'','Con video':m?m.con_video:'','Cumplen 6+1':m?m.cumplen:'','% 6+1':m?kPct(m.cumplen,m.medidas):''}});
   const wb=XLSX.utils.book_new();
