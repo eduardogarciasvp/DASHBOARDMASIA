@@ -299,13 +299,12 @@
   .act-card .at .ct{font-size:12px;color:var(--gris)}
   .act-card .at .ct b{color:var(--azul-tinta)}
   .chan-pills{display:flex;gap:6px;flex-wrap:wrap}
-  table.act-tbl{min-width:0;font-size:12.5px}
-  table.act-tbl thead th{position:static;background:none;color:var(--gris);font-size:10px;padding:4px 6px;border-bottom:1px solid var(--linea)}
-  table.act-tbl td{padding:5px 6px;white-space:nowrap}
-  table.act-tbl td.l{white-space:normal}
-  table.act-tbl tr.ag td{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--azul);background:var(--papel);text-align:left;padding:5px 6px}
-  table.act-tbl tr.at-tot td{font-weight:700;color:var(--azul-tinta);border-top:2px solid var(--azul);border-bottom:none}
-  table.act-tbl .pillpct{min-width:44px;font-size:11px;padding:2px 6px}
+  .u-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--tinta);
+    background:var(--blanco);border:1px solid var(--linea);border-radius:20px;padding:3px 4px 3px 10px}
+  .u-pill .dot{margin-right:0}
+  .u-pill.off{color:var(--gris);background:var(--papel)}
+  .u-pill b{font-size:11px;padding:2px 7px;border-radius:12px}
+  .act-card .at .ct .pillpct{min-width:0;font-size:11px;padding:2px 7px}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
   .dot.on{background:var(--verde)} .dot.off{background:#C4CAD4}
   .act-line{display:grid;grid-template-columns:118px 1fr;gap:8px;align-items:start;padding:7px 0;border-top:1px solid var(--linea)}
@@ -559,7 +558,7 @@
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Marketplaces por <b>canal · empresa</b>; cada tienda propia cuenta como una. ● verde = con publicaciones · ● gris = en Cobertura sin publicaciones. <b>Reales</b> = publicaciones que cumplen la matriz · <b>Posibles</b> = publicaciones de la matriz.</span></div>
+      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Marketplaces por <b>canal · empresa</b>; cada tienda propia cuenta como una. ● verde = con publicaciones · ● gris = sin publicaciones. El % es publicaciones reales ÷ posibles según la matriz; las cifras están en el detalle de abajo (o al pasar el mouse).</span></div>
       <div class="act-grid" id="k6Paises"></div>
     </div>
 
@@ -2211,19 +2210,19 @@ function kpiRender(){
       <div class="cl"><span>${TIENDAS_PROPIAS.includes(c)?'Países activos':'Empresas activas'} <b>${ucA}/${uc.length}</b></span><span>6+1 ${q==null?'<b>—</b>':pill(q)}</span></div>
     </div>`}).join(''):'<div class="empty">Sin canales para el filtro elegido.</div>';
 
-  // Activos por país · con publicaciones reales vs posibles
+  // Activos por país · solo % (las cifras de reales y posibles van en el detalle de abajo)
   const ordP=[...new Set(UNI.map(u=>u.pais))];
-  const filaU=(u,txt)=>`<tr><td class="l"><span class="dot ${u.activo?'on':'off'}"></span>${kEsc(txt)}</td><td>${fmt(u.real)}</td><td class="dim">${fmt(u.pos)}</td><td>${pill(kPct(u.real,u.pos))}</td></tr>`;
+  const pillU=(u,txt)=>{const q=kPct(u.real,u.pos);
+    return `<span class="u-pill ${u.activo?'':'off'}" title="${kEsc(u.canal+(u.empresa?' · '+u.empresa:''))}: ${fmt(u.real)} reales de ${fmt(u.pos)} posibles"><span class="dot ${u.activo?'on':'off'}"></span>${kEsc(txt)}<b class="${q==null?'n':cls(q)}">${q==null?'—':q+'%'}</b></span>`};
   document.getElementById('k6Paises').innerHTML=ordP.length?ordP.map(p=>{
     const us=UNI.filter(u=>u.pais===p),on=us.filter(u=>u.activo).length;
-    const r=us.reduce((a,u)=>a+u.real,0),ps=us.reduce((a,u)=>a+u.pos,0);
+    const q=kPct(us.reduce((a,u)=>a+u.real,0),us.reduce((a,u)=>a+u.pos,0));
     const props=us.filter(u=>u.propia);
     const mkts=[...new Set(us.filter(u=>!u.propia).map(u=>u.canal))];
-    let body=mkts.map(c=>`<tr class="ag"><td colspan="4">${kEsc(c)}</td></tr>`+us.filter(u=>!u.propia&&u.canal===c).map(u=>filaU(u,u.empresa)).join('')).join('');
-    if(props.length)body+=`<tr class="ag"><td colspan="4">Tiendas propias</td></tr>`+props.map(u=>filaU(u,u.canal)).join('');
-    return `<div class="act-card"><div class="at"><span class="nm"><span class="flag">${FLAGS[p]||''}</span>${kEsc(p)}</span><span class="ct"><b>${on}</b> de ${us.length} activos</span></div>
-      <table class="act-tbl"><thead><tr><th class="l">Canal · empresa</th><th>Reales</th><th>Posibles</th><th>%</th></tr></thead><tbody>${body}
-      <tr class="at-tot"><td class="l">Total ${kEsc(p)}</td><td>${fmt(r)}</td><td>${fmt(ps)}</td><td>${pill(kPct(r,ps))}</td></tr></tbody></table></div>`}).join('')
+    let lines=mkts.map(c=>`<div class="act-line"><span class="al">${kEsc(c)}</span><div class="chan-pills">${us.filter(u=>!u.propia&&u.canal===c).map(u=>pillU(u,u.empresa)).join('')}</div></div>`).join('');
+    if(props.length)lines+=`<div class="act-line"><span class="al">Tiendas propias</span><div class="chan-pills">${props.map(u=>pillU(u,u.canal)).join('')}</div></div>`;
+    return `<div class="act-card"><div class="at"><span class="nm"><span class="flag">${FLAGS[p]||''}</span>${kEsc(p)}</span>
+      <span class="ct"><b>${on}</b>/${us.length} activos · pub. ${pill(q)}</span></div>${lines}</div>`}).join('')
     :'<div class="empty">Define tiendas en la pestaña Cobertura o carga publicaciones.</div>';
 
   // Detalle
