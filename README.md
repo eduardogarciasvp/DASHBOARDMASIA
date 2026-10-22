@@ -18,6 +18,7 @@ políticas RLS imponen quién puede hacer qué.
 | `index.html` | El dashboard (3 pestañas + login). |
 | `config.js` | URL + anon key de tu proyecto Supabase. |
 | `supabase_setup.sql` | Tablas + políticas RLS + triggers. Se corre una vez. |
+| `kpis_setup.sql` | Tablas de la pestaña KPIs · Canales. Se corre una vez. |
 
 ---
 
@@ -87,6 +88,24 @@ Una fila por listing, con estas columnas (los nombres se detectan solos):
 - Si el archivo **no** trae esas columnas, el programa vuelve al modo antiguo (un archivo = una tienda, detectada por el nombre).
 
 ---
+
+## Pestaña KPIs · Canales
+Canales publicados y activos, ventas vs meta por canal, % de cumplimiento y política **6 fotos + 1 video**.
+Stock por país y publicaciones posibles quedan para la fase 2 (conexión con el ERP).
+
+**Montaje (una vez):** Supabase → SQL Editor → pega `kpis_setup.sql` → **Run**.
+Solo crea tablas nuevas (`kpi_ventas`, `kpi_medios`); no toca ninguna existente.
+
+**Datos:**
+- **💵 Cargar ventas y metas** (solo admin): Excel con `AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO` (USD netos).
+  Sirve una hoja con ambas columnas o dos hojas (VENTAS y METAS). `MASIA_CA` se lee como Masia Compressors.
+  Reemplaza los años que trae el archivo.
+- **📷 Cargar fotos y video** (cualquier usuario): una fila por publicación, `PAIS · EMPRESA · CANAL · SKU · FOTOS · VIDEO`.
+  FOTOS = cantidad (o lista de URLs); VIDEO = SI/NO, cantidad o URL. Reemplaza solo las tiendas que trae.
+- **⬇ Plantillas** descarga un Excel de ejemplo con ambos formatos.
+
+Solo se guardan totales ya resumidos y la pestaña se carga al abrirla, así no frena el resto del panel.
+Más adelante n8n puede escribir en las mismas tablas (con la `service_role`, del lado del servidor) sin cambiar la página.
 
 ## Seguridad
 - La **anon key es pública**: puede ir en el repo. La protección real son las **políticas RLS**, no el secreto.

@@ -39,9 +39,9 @@
   .btn-solid{background:var(--ambar);color:#1A1206}
   .btn-solid:hover{filter:brightness(1.06)}
 
-  .tabs{display:flex;gap:4px;margin-top:18px;border-bottom:2px solid var(--linea)}
+  .tabs{display:flex;gap:4px;margin-top:18px;border-bottom:2px solid var(--linea);overflow-x:auto;scrollbar-width:thin}
   .tab{font-family:'Barlow Condensed';font-weight:600;font-size:17px;background:none;border:none;
-    color:var(--gris);padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s}
+    color:var(--gris);padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
   .tab.on{color:var(--azul);border-bottom-color:var(--ambar)}
   .tab:hover{color:var(--azul)}
 
@@ -272,6 +272,46 @@
   .acc li b{color:var(--azul-tinta)}
   .rep-foot{margin-top:14px;border-top:2px solid var(--ambar);padding-top:6px;font-size:9px;color:var(--gris);display:flex;justify-content:space-between}
 
+  /* ===== Pestaña 6 · KPIs por canal ===== */
+  .k6-filt{margin-bottom:14px}
+  .k6-filt .covpg select{min-width:150px}
+  .k6-act{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .kpis.k6{grid-template-columns:repeat(3,1fr);margin-top:0}
+  .kpi .k-val.money{font-size:31px}
+  .kpi.k-ph{background:repeating-linear-gradient(135deg,#fff,#fff 10px,#F7F9FC 10px,#F7F9FC 20px)}
+  .kpi.k-ph::before{background:var(--neutro)}
+  .kpi.k-ph .k-val{color:var(--neutro);font-size:24px;margin-top:10px}
+  .canal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+  .canal-card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:15px 16px}
+  .canal-card .ct{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .canal-card .cn{font-family:'Barlow Condensed';font-weight:700;font-size:19px;color:var(--azul-tinta)}
+  .canal-card .cp{font-family:'Barlow Condensed';font-weight:700;font-size:24px;line-height:1}
+  .canal-card .cv{font-size:12px;color:var(--gris);margin:4px 0 8px}
+  .canal-card .cv b{color:var(--tinta);font-weight:600}
+  .canal-card .cl{display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;font-size:12px;color:var(--gris);margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
+  .canal-card .cl b{color:var(--tinta);font-weight:600}
+  .act-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .act-card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:13px 16px}
+  .act-card .at{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+  .act-card .at .nm{font-family:'Barlow Condensed';font-weight:600;font-size:18px;color:var(--azul-tinta);display:flex;gap:8px;align-items:center}
+  .act-card .at .ct{font-size:12px;color:var(--gris)}
+  .act-card .at .ct b{color:var(--azul-tinta)}
+  .chan-pills{display:flex;gap:6px;flex-wrap:wrap}
+  .chan-pill{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--linea);display:inline-flex;align-items:center;gap:6px}
+  .chan-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+  .chan-pill.on{background:var(--verde-bg);color:var(--verde);border-color:#BFE6D5}
+  .chan-pill.off{background:var(--neutro-bg);color:var(--neutro)}
+  .estado{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:12px;display:inline-block}
+  .estado.on{background:var(--verde-bg);color:var(--verde)}
+  .estado.off{background:var(--rojo-bg);color:var(--rojo)}
+  .estado.nc{background:var(--neutro-bg);color:var(--gris)}
+  table.k6t{min-width:980px}
+  table.k6t .grp-row td{text-align:left}
+  table.k6t .subrow td{font-weight:700;background:#F7F9FC;color:var(--azul-tinta)}
+  .stock-ph{border:2px dashed var(--linea);border-radius:12px;padding:18px 20px;background:var(--blanco);color:var(--gris);font-size:13px}
+  .stock-ph b{color:var(--azul-tinta)}
+  @media(max-width:860px){.kpis.k6{grid-template-columns:1fr 1fr}.k6-act{margin-left:0}}
+
   @media print{
     @page{size:A4;margin:11mm}
     .head-actions,.dropzone,.tabs,.matsel,.chips,.fpanel,.modal-bg{display:none!important}
@@ -327,6 +367,7 @@
     <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
     <button class="tab" id="tab4" onclick="setPage(4)">Validación · Títulos</button>
     <button class="tab" id="tab5" onclick="setPage(5)">Objetivos · Semana</button>
+    <button class="tab" id="tab6" onclick="setPage(6)">KPIs · Canales</button>
   </div>
 
   <!-- ===================== PÁGINA 1 ===================== -->
@@ -469,6 +510,61 @@
         <button class="btn-cov" onclick="agregarObjPers()">+ Agregar</button>
       </div>
       <div id="objPersList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== PÁGINA 6 · KPIs POR CANAL ===================== -->
+  <div class="page" id="page6">
+    <div class="sec" style="margin-top:18px">
+      <div class="sec-h">
+        <h2>KPIs por canal</h2>
+        <span class="hint">Canales activos, ventas contra meta y política <b>6 fotos + 1 video</b>. Se lee de tablas ya resumidas para que el panel cargue rápido.</span>
+      </div>
+      <div class="covform k6-filt">
+        <div class="covpg"><label>País</label><select id="k6Pais" onchange="kpiRender()"></select></div>
+        <div class="covpg"><label>Año</label><select id="k6Anio" onchange="kpiRender()"></select></div>
+        <div class="covpg"><label>Período</label><select id="k6Per" onchange="kpiRender()"></select></div>
+        <div class="k6-act">
+          <button class="btn-cov solo-admin" onclick="document.getElementById('fileVentas').click()">💵 Cargar ventas y metas</button>
+          <button class="btn-cov" onclick="document.getElementById('fileMedios').click()">📷 Cargar fotos y video</button>
+          <button class="btn-cov ghost" onclick="kpiPlantillas()">⬇ Plantillas</button>
+          <button class="btn-cov ghost" onclick="kpiExcel()">⬇ Excel</button>
+          <button class="btn-cov ghost" onclick="kpiAbrir(true)" title="Volver a leer los datos">↻</button>
+        </div>
+        <input id="fileVentas" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="kpiCargarVentas(event)">
+        <input id="fileMedios" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="kpiCargarMedios(event)">
+      </div>
+      <div id="k6Status" class="covstat warn" style="display:none"></div>
+      <div class="kpis k6" id="k6Kpis"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Ventas vs meta por canal</h2><span class="hint" id="k6PerHint"></span></div>
+      <div class="canal-grid" id="k6Canales"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Verde = el canal tiene publicaciones cargadas · gris = está en Cobertura pero sin publicaciones</span></div>
+      <div class="act-grid" id="k6Paises"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Detalle por tienda</h2><span class="hint">País · Empresa · Canal</span></div>
+      <div class="tbl-wrap"><div id="k6Tabla"></div></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Stock y publicaciones posibles</h2></div>
+      <div class="stock-ph"><b>Fase 2 · conexión con el ERP.</b> Aquí irán los productos en stock por país y cuántas publicaciones se podrían hacer en cada canal con ese stock (SKUs con existencia × canales donde la matriz dice que deben estar).</div>
+    </div>
+
+    <div class="note">
+      <b>Cómo se calcula:</b><br>
+      • <b>Tienda activa</b> = país · empresa · canal con publicaciones cargadas (📦 Cargar publicaciones). El total sale de la pestaña Cobertura.<br>
+      • <b>Ventas y meta</b> en USD netos, del Excel de ventas (AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO). Puede traer una sola hoja con ambas columnas, o hojas VENTAS y METAS separadas. Cargar un archivo <b>reemplaza los años que contiene</b>.<br>
+      • <b>Acumulado a la fecha</b> suma de enero al mes en curso (la meta del mes en curso cuenta completa). En años pasados equivale al año completo.<br>
+      • <b>Política 6 + 1</b> = publicaciones con <b>6 fotos o más</b> y <b>al menos 1 video</b>, sobre las publicaciones revisadas en el archivo de fotos y video (PAIS · EMPRESA · CANAL · SKU · FOTOS · VIDEO). Cargar un archivo reemplaza solo las tiendas que contiene.<br>
+      • Semáforo: <b style="color:var(--verde)">90–100%</b> · <b style="color:#9A7A12">75–90%</b> · <b style="color:var(--rojo)">0–75%</b>
     </div>
   </div>
 
@@ -816,7 +912,8 @@ function renderMatriz(){
 }
 
 // ===== Render maestro =====
-function render(){renderKPIs();renderChips();renderPaises();renderHead();renderTabla();renderMatriz();renderCobertura()}
+function render(){renderKPIs();renderChips();renderPaises();renderHead();renderTabla();renderMatriz();renderCobertura();
+  if(PAGE===6&&typeof KPI!=='undefined'&&KPI.cargado){kpiFiltros();kpiRender();}}
 function upd(idx,campo,el){
   const v=parseInt(el.textContent.replace(/[^\d]/g,''))||0;
   DATA[idx][campo]=v;clearTimeout(window._t);window._t=setTimeout(render,700);
@@ -824,12 +921,13 @@ function upd(idx,campo,el){
 function setMetrica(m){METRICA=m;
   document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
 function setPage(n){PAGE=n;
-  for(let i=1;i<=5;i++){
+  for(let i=1;i<=6;i++){
     document.getElementById('page'+i).classList.toggle('on',n===i);
     document.getElementById('tab'+i).classList.toggle('on',n===i);
   }
   if(n===4&&SB){if(VALID_CACHE)pintarValidacion();else cargarValidacion();}
   if(n===5&&SB)renderObjetivos();
+  if(n===6&&SB)kpiAbrir();
 }
 
 // ===== Carga de PUBLICACIONES (real) =====
@@ -1928,6 +2026,349 @@ async function doLogin(){
   await entrarApp();
 }
 async function doLogout(){try{await SB.auth.signOut()}catch(e){}location.reload();}
+// ===================================================================
+// ===== Pestaña 6 · KPIs por canal (ventas, meta, activos, 6+1) =====
+// Se carga SOLO al abrir la pestaña (no frena la carga inicial del panel).
+// ===================================================================
+var KPI={cargado:false,cargando:false,ventas:[],medios:[],faltaSQL:false};
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const kEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const kUSD=n=>'$ '+Math.round(n||0).toLocaleString('de-DE');
+const kPct=(a,b)=>b?Math.round(a/b*100):null;
+const kKey=(p,e,c)=>p+'|'+e+'|'+c;
+
+// Lee una tabla completa en páginas de 1.000 (límite por consulta de Supabase)
+async function kpiSelTodo(tabla){
+  let out=[],i=0;
+  for(;;){
+    const {data,error}=await SB.from(tabla).select('*').range(i,i+999);
+    if(error)throw error;
+    out=out.concat(data||[]);
+    if(!data||data.length<1000)break;
+    i+=1000;
+  }
+  return out;
+}
+function kpiStatus(html,tipo){
+  const el=document.getElementById('k6Status');if(!el)return;
+  if(!html){el.style.display='none';return}
+  el.style.display='';el.className='covstat '+(tipo||'warn');el.innerHTML=html;
+}
+async function kpiAbrir(force){
+  if(KPI.cargando)return;
+  if(KPI.cargado&&!force){kpiRender();return}
+  KPI.cargando=true;
+  kpiStatus('Cargando ventas y fotos…','warn');
+  try{
+    const [v,m]=await Promise.all([kpiSelTodo('kpi_ventas'),kpiSelTodo('kpi_medios')]);
+    KPI.ventas=v;KPI.medios=m;KPI.faltaSQL=false;KPI.cargado=true;
+    kpiStatus(null);
+  }catch(e){
+    KPI.cargado=true;KPI.ventas=[];KPI.medios=[];
+    KPI.faltaSQL=/does not exist|schema cache|relation/i.test(e.message||'');
+    kpiStatus(KPI.faltaSQL
+      ?'⚠ Faltan las tablas de esta pestaña: corre <code>kpis_setup.sql</code> en Supabase (SQL Editor → New query → Run). Mientras tanto se muestran solo los canales activos.'
+      :'⚠ No se pudieron leer los datos: '+kEsc(e.message||e),'warn');
+  }finally{KPI.cargando=false;}
+  kpiFiltros();kpiRender();
+}
+
+// ---- Filtros (país · año · período) ----
+function kpiFiltros(){
+  const sp=document.getElementById('k6Pais'),sa=document.getElementById('k6Anio'),sr=document.getElementById('k6Per');
+  if(!sp)return;
+  const pv=sp.value,av=sa.value,rv=sr.value;
+  const paises=ORD_PAIS.filter(p=>COBROWS.some(c=>c.pais===p)||PUBROWS.some(c=>c.pais===p)||KPI.ventas.some(c=>c.pais===p));
+  sp.innerHTML='<option value="">Todos los países</option>'+paises.map(p=>`<option value="${kEsc(p)}">${FLAGS[p]||''} ${kEsc(p)}</option>`).join('');
+  sp.value=paises.includes(pv)?pv:'';
+  const hoy=new Date().getFullYear();
+  const anios=[...new Set([hoy,...KPI.ventas.map(r=>r.anio)])].sort((a,b)=>b-a);
+  sa.innerHTML=anios.map(a=>`<option value="${a}">${a}</option>`).join('');
+  sa.value=anios.includes(+av)?av:String(hoy);
+  sr.innerHTML='<option value="ytd">Acumulado a la fecha</option><option value="anio">Año completo</option>'
+    +MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  sr.value=rv||'ytd';
+}
+function kpiMeses(anio,per){
+  const hoy=new Date();
+  if(per==='ytd'){const tope=anio===hoy.getFullYear()?hoy.getMonth()+1:12;return Array.from({length:tope},(_,i)=>i+1)}
+  if(per==='anio')return Array.from({length:12},(_,i)=>i+1);
+  return [+per];
+}
+function kpiPerTexto(anio,per,meses){
+  if(per==='anio')return `Año completo ${anio}`;
+  if(per==='ytd')return `Acumulado ${anio}: ${MESES[0].slice(0,3)}–${MESES[meses[meses.length-1]-1].slice(0,3)}`;
+  return `${MESES[+per-1]} ${anio}`;
+}
+
+// ---- Modelo: una fila por tienda (país · empresa · canal) ----
+function kpiModelo(){
+  const pais=document.getElementById('k6Pais').value;
+  const anio=+document.getElementById('k6Anio').value;
+  const per=document.getElementById('k6Per').value;
+  const meses=new Set(kpiMeses(anio,per));
+  const M={};
+  const get=(p,e,c)=>{const k=kKey(p,e,c);return M[k]=M[k]||{pais:p,empresa:e,canal:c,cob:false,pub:0,ventas:0,meta:0,med:null}};
+  COBROWS.forEach(c=>get(c.pais,c.empresa,c.canal).cob=true);
+  PUBROWS.forEach(p=>{get(p.pais,p.empresa,p.canal).pub+=(p.pub||0)});
+  KPI.ventas.forEach(v=>{if(v.anio!==anio||!meses.has(v.mes))return;
+    const r=get(v.pais,v.empresa,v.canal);r.ventas+=+v.facturacion||0;r.meta+=+v.objetivo||0;});
+  KPI.medios.forEach(m=>get(m.pais,m.empresa,m.canal).med=m);
+  let rows=Object.values(M);
+  if(pais)rows=rows.filter(r=>r.pais===pais);
+  rows.forEach(r=>{r.activo=r.pub>0;r.estado=r.activo?'on':(r.cob?'off':'nc');});
+  rows.sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)
+    ||a.empresa.localeCompare(b.empresa)||CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal));
+  return {rows,anio,per,meses:[...meses].sort((a,b)=>a-b),pais};
+}
+function kpiSuma(rows){
+  const t={ventas:0,meta:0,medidas:0,fotos:0,video:0,cumplen:0,act:0,cob:0,pub:0};
+  rows.forEach(r=>{t.ventas+=r.ventas;t.meta+=r.meta;t.pub+=r.pub;
+    if(r.cob)t.cob++;if(r.activo)t.act++;
+    if(r.med){t.medidas+=r.med.medidas;t.fotos+=r.med.con_fotos;t.video+=r.med.con_video;t.cumplen+=r.med.cumplen;}});
+  t.tiendas=rows.filter(r=>r.cob||r.activo).length;
+  return t;
+}
+
+// ---- Render ----
+function kpiRender(){
+  if(!KPI.cargado||!document.getElementById('k6Kpis'))return;
+  if(!document.getElementById('k6Anio').value)kpiFiltros();
+  const {rows,anio,per,meses}=kpiModelo();
+  const tiendas=rows.filter(r=>r.cob||r.activo||r.ventas||r.meta||r.med);
+  const t=kpiSuma(tiendas);
+  const pM=kPct(t.ventas,t.meta), p61=kPct(t.cumplen,t.medidas);
+  const pAct=kPct(t.act,t.tiendas);
+  const canalesAct=new Set(tiendas.filter(r=>r.activo).map(r=>r.pais+'|'+r.canal)).size;
+  const canalesTot=new Set(tiendas.filter(r=>r.cob||r.activo).map(r=>r.pais+'|'+r.canal)).size;
+  const perTx=kpiPerTexto(anio,per,meses);
+  const k=(c,lab,val,sub,money)=>`<div class="kpi ${c}"><div class="k-lab">${lab}</div><div class="k-val${money?' money':''}">${val}</div><div class="k-sub">${sub}</div></div>`;
+  const kc=p=>p==null?'is-n':p>=90?'is-g':p>=75?'is-y':'is-r';
+  document.getElementById('k6Kpis').innerHTML=
+     k(kc(pAct),'Canales publicados y activos',`${canalesAct}<small> / ${canalesTot}</small>`,`${t.act} de ${t.tiendas} tiendas (país·empresa·canal) con publicaciones`)
+    +k('k-blue','Ventas · '+perTx,kUSD(t.ventas),t.ventas||t.meta?'USD netos':'Sin ventas cargadas para este período',true)
+    +k('k-amb','Meta · '+perTx,kUSD(t.meta),t.meta?'USD':'Sin metas cargadas para este período',true)
+    +k(kc(pM),'% cumplimiento vs meta',pM==null?'—':pM+'<small>%</small>',pM==null?'Falta la meta del período':`Faltan ${kUSD(Math.max(0,t.meta-t.ventas))} para la meta`)
+    +k(kc(p61),'Política 6 fotos + 1 video',p61==null?'—':p61+'<small>%</small>',t.medidas?`${fmt(t.cumplen)} de ${fmt(t.medidas)} publicaciones revisadas · 6 fotos ${kPct(t.fotos,t.medidas)}% · video ${kPct(t.video,t.medidas)}%`:'Sin archivo de fotos y video cargado')
+    +`<div class="kpi k-ph"><div class="k-lab">Productos en stock</div><div class="k-val">Fase 2 · ERP</div><div class="k-sub">Stock por país y publicaciones posibles por canal</div></div>`;
+  document.getElementById('k6PerHint').textContent=perTx+' · USD netos';
+
+  // Por canal
+  const porCanal={};
+  tiendas.forEach(r=>(porCanal[r.canal]=porCanal[r.canal]||[]).push(r));
+  const ordC=Object.keys(porCanal).sort((a,b)=>{const ia=CANALES.indexOf(a),ib=CANALES.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)});
+  document.getElementById('k6Canales').innerHTML=ordC.length?ordC.map(c=>{
+    const s=kpiSuma(porCanal[c]),p=kPct(s.ventas,s.meta),q=kPct(s.cumplen,s.medidas);
+    return `<div class="canal-card">
+      <div class="ct"><span class="cn">${kEsc(c)}</span><span class="cp" style="color:${p==null?'var(--neutro)':col(p)}">${p==null?'—':p+'%'}</span></div>
+      <div class="cv"><b>${kUSD(s.ventas)}</b> de ${kUSD(s.meta)}</div>
+      <div class="bar"><span style="width:${Math.min(100,p||0)}%;background:${p==null?'var(--neutro)':col(p)}"></span></div>
+      <div class="cl"><span>Tiendas activas <b>${s.act}/${s.tiendas}</b></span><span>6+1 ${q==null?'<b>—</b>':pill(q)}</span></div>
+    </div>`}).join(''):'<div class="empty">Sin canales para el filtro elegido.</div>';
+
+  // Activos por país
+  const porPais={};
+  tiendas.filter(r=>r.cob||r.activo).forEach(r=>{const o=(porPais[r.pais]=porPais[r.pais]||{});o[r.canal]=o[r.canal]||r.activo;});
+  const ordP=Object.keys(porPais).sort((a,b)=>ORD_PAIS.indexOf(a)-ORD_PAIS.indexOf(b));
+  document.getElementById('k6Paises').innerHTML=ordP.length?ordP.map(p=>{
+    const cs=Object.keys(porPais[p]).sort((a,b)=>CANALES.indexOf(a)-CANALES.indexOf(b));
+    const on=cs.filter(c=>porPais[p][c]).length;
+    return `<div class="act-card"><div class="at"><span class="nm"><span class="flag">${FLAGS[p]||''}</span>${kEsc(p)}</span><span class="ct"><b>${on}</b> de ${cs.length} canales activos</span></div>
+      <div class="chan-pills">${cs.map(c=>`<span class="chan-pill ${porPais[p][c]?'on':'off'}">${kEsc(c)}</span>`).join('')}</div></div>`}).join('')
+    :'<div class="empty">Define tiendas en la pestaña Cobertura o carga publicaciones.</div>';
+
+  // Detalle
+  const EST={on:'Activa',off:'Sin publicaciones',nc:'Fuera de cobertura'};
+  const fila=(r)=>{const p=kPct(r.ventas,r.meta),m=r.med;
+    return `<tr><td class="l">${kEsc(r.empresa)}</td><td class="l">${kEsc(r.canal)}</td>
+      <td class="l"><span class="estado ${r.estado}">${EST[r.estado]}</span></td>
+      <td>${r.pub?fmt(r.pub):'<span class="dim">0</span>'}</td>
+      <td>${r.ventas?kUSD(r.ventas):'<span class="dim">—</span>'}</td>
+      <td>${r.meta?kUSD(r.meta):'<span class="dim">—</span>'}</td>
+      <td>${pill(p)}</td>
+      <td>${m?pill(kPct(m.con_fotos,m.medidas)):pill(null)}</td>
+      <td>${m?pill(kPct(m.con_video,m.medidas)):pill(null)}</td>
+      <td>${m?pill(kPct(m.cumplen,m.medidas)):pill(null)}</td>
+      <td class="dim">${m?fmt(m.medidas):'—'}</td></tr>`};
+  const sub=(lab,s,cls)=>`<tr class="${cls}"><td class="l" colspan="3">${lab}</td><td>${fmt(s.pub)}</td><td>${kUSD(s.ventas)}</td><td>${kUSD(s.meta)}</td>
+      <td>${pill(kPct(s.ventas,s.meta))}</td><td>${pill(kPct(s.fotos,s.medidas))}</td><td>${pill(kPct(s.video,s.medidas))}</td><td>${pill(kPct(s.cumplen,s.medidas))}</td><td>${s.medidas?fmt(s.medidas):'—'}</td></tr>`;
+  let h=`<table class="k6t"><thead><tr><th class="l">Empresa</th><th class="l">Canal</th><th class="l">Estado</th><th>Publicaciones</th><th>Ventas</th><th>Meta</th><th>% Meta</th><th>6 fotos</th><th>Video</th><th>6 + 1</th><th>Revisadas</th></tr></thead><tbody>`;
+  if(!tiendas.length)h+='<tr><td colspan="11" class="empty">Sin datos para el filtro elegido.</td></tr>';
+  ordP.concat(Object.keys(tiendas.reduce((o,r)=>(o[r.pais]=1,o),{})).filter(p=>!ordP.includes(p))).forEach(p=>{
+    const rs=tiendas.filter(r=>r.pais===p);if(!rs.length)return;
+    h+=`<tr class="grp-row"><td colspan="11">${FLAGS[p]||''} ${kEsc(p)}</td></tr>`;
+    h+=rs.map(fila).join('');
+    h+=sub('Total '+kEsc(p),kpiSuma(rs),'subrow');
+  });
+  if(tiendas.length)h+=sub('TOTAL',t,'totrow');
+  document.getElementById('k6Tabla').innerHTML=h+'</tbody></table>';
+}
+
+// ---- Lectura de Excel ----
+function kpiLeerLibro(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=ev=>{try{res(XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true}))}catch(e){rej(e)}};
+    r.onerror=()=>rej(new Error('no se pudo leer el archivo'));
+    r.readAsArrayBuffer(file);
+  });
+}
+const kNorm=s=>String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim();
+function kCol(keys,cands){const n=keys.map(kNorm);for(const c of cands){const i=n.indexOf(c);if(i>=0)return keys[i]}return null}
+function kNum(v){
+  if(typeof v==='number')return v;
+  let s=String(v==null?'':v).replace(/[^0-9.,\-]/g,'');if(!s)return 0;
+  if(s.includes(',')&&s.includes('.'))s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'');
+  else if(s.includes(','))s=/,\d{1,2}$/.test(s)?s.replace(',','.'):s.replace(/,/g,'');
+  const n=parseFloat(s);return isNaN(n)?0:n;
+}
+const MES_ALIAS={ene:1,jan:1,feb:2,mar:3,abr:4,apr:4,may:5,jun:6,jul:7,ago:8,aug:8,sep:9,set:9,oct:10,nov:11,dic:12,dec:12};
+function kMes(v){
+  if(v instanceof Date)return v.getMonth()+1;
+  if(typeof v==='number')return v>=1&&v<=12?Math.round(v):null;
+  const s=kNorm(v);if(!s)return null;
+  if(/^\d+$/.test(s)){const n=+s;return n>=1&&n<=12?n:null}
+  return MES_ALIAS[s.slice(0,3)]||null;
+}
+function kEmpresa(v){
+  const s=String(v==null?'':v).trim();
+  if(/^masia[\s_]*ca$/i.test(s))return 'Masia Compressors';   // regla: MASIA_CA (Venezuela) = Masia Compressors
+  return normEmpresa(s.replace(/_/g,' '));
+}
+
+// ---- Cargar VENTAS Y METAS (solo admin) ----
+async function kpiCargarVentas(e){
+  const file=e.target.files[0];e.target.value='';
+  if(!file)return;
+  if(!esAdmin()){alert('Solo el administrador puede cargar ventas y metas.');return}
+  if(KPI.faltaSQL){alert('Primero corre kpis_setup.sql en Supabase.');return}
+  try{
+    const wb=await kpiLeerLibro(file);
+    const acc={};let leidas=0,omitidas=0;
+    for(const sn of wb.SheetNames){
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:''});
+      if(!rows.length)continue;
+      const keys=Object.keys(rows[0]);
+      const cA=kCol(keys,['ano','año','anio','year']),cM=kCol(keys,['mes','month','periodo']),cF=kCol(keys,['fecha','date']);
+      const cP=kCol(keys,['pais','country']),cE=kCol(keys,['empresa','company']),cC=kCol(keys,['canal','channel','marketplace','plataforma']);
+      const cV=kCol(keys,['facturacion','ventas','venta','facturado','monto','revenue','sales']);
+      const cO=kCol(keys,['objetivo','meta','metas','target','objetivos']);
+      if(!cP||!cE||!cC||(!cV&&!cO)||(!cM&&!cF))continue;   // hoja sin el formato esperado
+      rows.forEach(x=>{
+        let anio=cA?Math.round(kNum(x[cA])):null,mes=cM?kMes(x[cM]):null;
+        if(cF&&x[cF] instanceof Date){anio=anio||x[cF].getFullYear();mes=mes||x[cF].getMonth()+1;}
+        const pais=normPais(x[cP]),empresa=kEmpresa(x[cE]),canal=normCanal(x[cC]);
+        if(!anio||!mes||!pais||!empresa||!canal){omitidas++;return}
+        const k=[anio,mes,pais,empresa,canal].join('|');
+        const o=acc[k]=acc[k]||{anio,mes,pais,empresa,canal,facturacion:0,objetivo:0};
+        if(cV)o.facturacion+=kNum(x[cV]);
+        if(cO)o.objetivo+=kNum(x[cO]);
+        leidas++;
+      });
+    }
+    const filas=Object.values(acc);
+    if(!filas.length){alert('No encontré filas con el formato esperado.\n\nColumnas: AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO\n(usa ⬇ Plantillas para ver un ejemplo).');return}
+    const anios=[...new Set(filas.map(f=>f.anio))].sort();
+    const tv=filas.reduce((a,b)=>a+b.facturacion,0),to=filas.reduce((a,b)=>a+b.objetivo,0);
+    const ok=confirm(`Ventas y metas detectadas:\n\n• ${fmt(leidas)} filas → ${fmt(filas.length)} combinaciones mes·país·empresa·canal\n• Años: ${anios.join(', ')}\n• Facturación: ${kUSD(tv)}\n• Objetivo: ${kUSD(to)}`
+      +(omitidas?`\n• ${fmt(omitidas)} filas omitidas (sin año, mes, país, empresa o canal)`:'')
+      +`\n\nEsto REEMPLAZA los datos guardados de ${anios.join(', ')}. ¿Continuar?`);
+    if(!ok)return;
+    prog('Guardando ventas y metas…');
+    const del=await SB.from('kpi_ventas').delete().in('anio',anios);
+    if(del.error)throw del.error;
+    for(let i=0;i<filas.length;i+=500){
+      const {error}=await SB.from('kpi_ventas').insert(filas.slice(i,i+500));
+      if(error)throw error;
+      prog(`Guardando ventas y metas: ${fmt(Math.min(filas.length,i+500))} / ${fmt(filas.length)}…`);
+    }
+    prog(null);
+    await kpiAbrir(true);
+    alert(`✓ Ventas y metas guardadas (${anios.join(', ')}).`);
+  }catch(err){prog(null);alert('No se pudieron guardar las ventas: '+(err.message||err));}
+}
+
+// ---- Cargar FOTOS Y VIDEO (cualquier usuario) ----
+function kFotos(v){
+  if(typeof v==='number')return v;
+  const s=String(v==null?'':v).trim();if(!s)return 0;
+  if(/^\d+([.,]\d+)?$/.test(s))return Math.round(kNum(s));
+  const urls=s.split(/[\s,;|]+/).filter(x=>/^https?:\/\//i.test(x));
+  return urls.length;
+}
+function kVideo(v){
+  if(typeof v==='number')return v>0;
+  const s=kNorm(v);if(!s)return false;
+  if(/^(no|n|false|falso|0|ninguno|sin video)$/.test(s))return false;
+  if(/^\d+$/.test(s))return +s>0;
+  return true;   // si/sí/yes/x/URL
+}
+async function kpiCargarMedios(e){
+  const files=[...e.target.files];e.target.value='';
+  if(!files.length)return;
+  if(KPI.faltaSQL){alert('Primero corre kpis_setup.sql en Supabase.');return}
+  try{
+    const acc={};const avisos=[];
+    for(const file of files){
+      const wb=await kpiLeerLibro(file);
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      if(!rows.length){avisos.push(file.name+': hoja vacía');continue}
+      const keys=Object.keys(rows[0]);
+      const cP=kCol(keys,['pais','country']),cE=kCol(keys,['empresa','company']),cC=kCol(keys,['canal','channel','marketplace','plataforma']);
+      const cFo=kCol(keys,['fotos','imagenes','images','photos','pictures','n fotos','num fotos','cantidad fotos','cantidad de fotos','image count','numero de fotos']);
+      const cVi=kCol(keys,['video','videos','tiene video','has video','video url','url video','cantidad videos']);
+      if(!cFo||!cVi){avisos.push(`${file.name}: faltan las columnas FOTOS y/o VIDEO`);continue}
+      const det=(cP&&cE&&cC)?null:detectarPCE(file.name);
+      if(det&&!(det.pais&&det.empresa&&det.canal)){avisos.push(`${file.name}: sin columnas PAIS/EMPRESA/CANAL y no pude deducir la tienda por el nombre`);continue}
+      rows.forEach(x=>{
+        const pais=det?det.pais:normPais(x[cP]),empresa=det?det.empresa:kEmpresa(x[cE]),canal=det?det.canal:normCanal(x[cC]);
+        if(!pais||!empresa||!canal)return;
+        const k=kKey(pais,empresa,canal);
+        const o=acc[k]=acc[k]||{pais,empresa,canal,medidas:0,con_fotos:0,con_video:0,cumplen:0};
+        const f6=kFotos(x[cFo])>=6,v1=kVideo(x[cVi]);
+        o.medidas++;if(f6)o.con_fotos++;if(v1)o.con_video++;if(f6&&v1)o.cumplen++;
+      });
+    }
+    const filas=Object.values(acc);
+    if(!filas.length){alert('No encontré publicaciones para medir.\n\n'+avisos.join('\n')+'\n\nColumnas: PAIS · EMPRESA · CANAL · SKU · FOTOS · VIDEO (usa ⬇ Plantillas).');return}
+    const det=filas.map(f=>`• ${f.pais} · ${f.empresa} · ${f.canal}: ${fmt(f.cumplen)} de ${fmt(f.medidas)} cumplen (${kPct(f.cumplen,f.medidas)}%)`).join('\n');
+    if(!confirm(`Política 6 fotos + 1 video:\n\n${det}${avisos.length?'\n\n⚠ '+avisos.join('\n⚠ '):''}\n\nSe reemplazan solo estas ${filas.length} tienda(s). ¿Continuar?`))return;
+    prog('Guardando fotos y video…');
+    const {error}=await SB.from('kpi_medios').upsert(filas,{onConflict:'pais,empresa,canal'});
+    prog(null);
+    if(error)throw error;
+    await kpiAbrir(true);
+    alert(`✓ Fotos y video guardados para ${filas.length} tienda(s).`);
+  }catch(err){prog(null);alert('No se pudieron guardar fotos y video: '+(err.message||err));}
+}
+
+// ---- Plantillas y exportación ----
+function kpiPlantillas(){
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([
+    {'AÑO':2026,'MES':1,'PAIS':'Estados Unidos','EMPRESA':'Masia Group','CANAL':'Amazon','FACTURACION':12500,'OBJETIVO':15000},
+    {'AÑO':2026,'MES':1,'PAIS':'México','EMPRESA':'Masia Group','CANAL':'Mercado Libre','FACTURACION':8300,'OBJETIVO':9000}
+  ]),'Ventas y metas');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([
+    {'PAIS':'Estados Unidos','EMPRESA':'Masia Group','CANAL':'eBay','SKU':'MAS.1613610500','FOTOS':7,'VIDEO':'SI'},
+    {'PAIS':'Colombia','EMPRESA':'Masia Group','CANAL':'Masia Shop','SKU':'MAS.2205490565','FOTOS':4,'VIDEO':'NO'}
+  ]),'Fotos y video');
+  XLSX.writeFile(wb,'Plantillas_KPIs_Canales.xlsx');
+}
+function kpiExcel(){
+  if(!KPI.cargado){alert('Abre la pestaña primero.');return}
+  const {rows,anio,per,meses}=kpiModelo();
+  const EST={on:'Activa',off:'Sin publicaciones',nc:'Fuera de cobertura'};
+  const out=rows.filter(r=>r.cob||r.activo||r.ventas||r.meta||r.med).map(r=>{const m=r.med;return {
+    'País':r.pais,'Empresa':r.empresa,'Canal':r.canal,'Estado':EST[r.estado],'Publicaciones':r.pub,
+    'Ventas USD':Math.round(r.ventas),'Meta USD':Math.round(r.meta),'% Meta':kPct(r.ventas,r.meta),
+    'Revisadas 6+1':m?m.medidas:'','Con 6 fotos':m?m.con_fotos:'','Con video':m?m.con_video:'','Cumplen 6+1':m?m.cumplen:'','% 6+1':m?kPct(m.cumplen,m.medidas):''}});
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out),'KPIs por tienda');
+  const tx=kpiPerTexto(anio,per,meses).replace(/[^\w\-]+/g,'_');
+  XLSX.writeFile(wb,`KPIs_Canales_${tx}.xlsx`);
+}
+
 async function initApp(){
   const ov=document.getElementById('loginOverlay');
   if(!supaConfigurada()){
