@@ -75,3 +75,35 @@ drop policy if exists p_km_upd on public.kpi_medios;
 create policy p_km_upd on public.kpi_medios for update to authenticated using (true) with check (true);
 drop policy if exists p_km_del on public.kpi_medios;
 create policy p_km_del on public.kpi_medios for delete to authenticated using (true);
+
+-- ============================================================
+-- 3) ESTADO MANUAL DE CANALES (botón "＋ Agregar canal" de la pestaña KPIs)
+--    Para canales que existen pero no tienen datos cargados, o que aún
+--    no están creados. En tiendas propias (Masia Shop, Xstore Shop,
+--    Camozzi Shop) la empresa se guarda como '*'.
+--    Solo afecta la pestaña KPIs · Canales (no toca Cobertura ni PDFs).
+-- ============================================================
+create table if not exists public.kpi_canales (
+  pais         text not null,
+  empresa      text not null,
+  canal        text not null,
+  estado       text not null check (estado in ('activo','pendiente','inactivo')),
+  nota         text,
+  subido_por   uuid references auth.users(id),
+  fecha        timestamptz not null default now(),
+  primary key (pais, empresa, canal)
+);
+
+drop trigger if exists trg_sello_kpi_canales on public.kpi_canales;
+create trigger trg_sello_kpi_canales before insert or update on public.kpi_canales
+  for each row execute function public.sello_kpi();
+
+alter table public.kpi_canales enable row level security;
+drop policy if exists p_kc_sel on public.kpi_canales;
+create policy p_kc_sel on public.kpi_canales for select to authenticated using (true);
+drop policy if exists p_kc_ins on public.kpi_canales;
+create policy p_kc_ins on public.kpi_canales for insert to authenticated with check (public.is_admin());
+drop policy if exists p_kc_upd on public.kpi_canales;
+create policy p_kc_upd on public.kpi_canales for update to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists p_kc_del on public.kpi_canales;
+create policy p_kc_del on public.kpi_canales for delete to authenticated using (public.is_admin());
