@@ -281,7 +281,9 @@
   .kpi.k-ph{background:repeating-linear-gradient(135deg,#fff,#fff 10px,#F7F9FC 10px,#F7F9FC 20px)}
   .kpi.k-ph::before{background:var(--neutro)}
   .kpi.k-ph .k-val{color:var(--neutro);font-size:24px;margin-top:10px}
-  .canal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .canal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  @media(max-width:860px){.canal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:520px){.canal-grid{grid-template-columns:1fr}}
   .canal-card{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:15px 16px;min-width:0;overflow:hidden}
   .canal-card .ct{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
   .canal-card .cn{font-family:'Barlow Condensed';font-weight:700;font-size:19px;color:var(--azul-tinta)}
@@ -312,6 +314,27 @@
   .estado.m_activo{background:var(--verde-bg);color:var(--verde)}
   .estado.m_pendiente{background:var(--amar-bg);color:#7A5B14}
   .estado.m_inactivo{background:var(--rojo-bg);color:var(--rojo)}
+  .kd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:4px}
+  .kd-t{font-family:'Barlow Condensed';font-weight:700;font-size:21px;color:var(--azul-tinta)}
+  .kd-s{font-size:12.5px;color:var(--gris);margin-top:2px}
+  .kd-big{font-family:'Barlow Condensed';font-weight:700;font-size:40px;line-height:1;text-align:right}
+  .kd-big small{display:block;font-family:'Inter';font-size:11px;font-weight:500;color:var(--gris)}
+  .kd-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .kd-kpis div{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:9px 12px}
+  .kd-kpis span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);font-weight:600}
+  .kd-kpis b{font-family:'Barlow Condensed';font-size:24px;color:var(--azul-tinta)}
+  table.kd-tbl{min-width:0;font-size:12px}
+  table.kd-tbl thead th{white-space:normal;padding:8px 7px;font-size:10px;vertical-align:bottom}
+  table.kd-tbl tbody td{padding:7px}
+  table.kd-tbl td.wr{white-space:normal;min-width:220px}
+  table.kd-tbl td.nw{white-space:nowrap}
+  .kd-b{padding:4px 10px!important;font-size:11.5px!important}
+  .kd-note{margin-top:10px;font-size:12.5px}
+  .sv{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rojo);background:var(--rojo-bg);border-radius:10px;padding:1px 6px;margin-left:4px}
+  .kd-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px}
+  .kd-tabs button{font-family:'Inter';font-weight:600;font-size:12.5px;border:1px solid var(--linea);background:var(--blanco);color:var(--gris);padding:7px 12px;border-radius:8px;cursor:pointer}
+  .kd-tabs button.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+  @media(max-width:520px){.kd-kpis{grid-template-columns:1fr}}
   .kc-row{display:grid;grid-template-columns:1fr 150px 32px;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--linea);border-radius:9px;margin-top:6px;font-size:13px}
   .kc-row .kn{color:var(--gris);font-size:12px}
   .kc-row select{font-size:12.5px;border:1px solid var(--linea);border-radius:7px;padding:6px 8px;background:#fff}
@@ -572,7 +595,7 @@
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Marketplaces por <b>canal · empresa</b>; cada tienda propia cuenta como una. <span style="color:var(--verde)">●</span> activo · <span style="color:var(--amar)">●</span> pendiente · <span style="color:var(--rojo)">●</span> inactivo / no creado · <span style="color:#C4CAD4">●</span> sin publicaciones. Clic en una etiqueta para cambiar su estado. El % es publicaciones reales ÷ posibles según la matriz; las cifras están en el detalle de abajo (o al pasar el mouse).</span></div>
+      <div class="sec-h"><h2>Canales publicados y activos por país</h2><span class="hint">Marketplaces por <b>canal · empresa</b>; cada tienda propia cuenta como una. <span style="color:var(--verde)">●</span> activo · <span style="color:var(--amar)">●</span> pendiente · <span style="color:var(--rojo)">●</span> inactivo / no creado · <span style="color:#C4CAD4">●</span> sin publicaciones. Clic en una etiqueta para ver el detalle (posibles, reales, SKUs y títulos). El % es publicaciones reales ÷ posibles según la matriz; las cifras están en el detalle de abajo (o al pasar el mouse).</span></div>
       <div class="act-grid" id="k6Paises"></div>
     </div>
 
@@ -645,6 +668,14 @@
     <div id="kcMsg" class="small" style="min-height:16px"></div>
     <div class="sec-h" style="margin:16px 0 8px"><h2 style="font-size:19px">Estados marcados a mano</h2></div>
     <div id="kcLista"></div>
+  </div>
+</div>
+
+<!-- Modal: detalle de un canal (pestaña KPIs) -->
+<div class="modal-bg" id="k6Det" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:980px">
+    <div class="modal-h"><h3>Detalle del canal</h3><button onclick="document.getElementById('k6Det').style.display='none'">✕</button></div>
+    <div id="kdBody"></div>
   </div>
 </div>
 
@@ -1934,6 +1965,10 @@ function pintarValidacion(){
 }
 async function descargarValidacion(i){
   const r=VALID_CACHE&&VALID_CACHE[i];if(!r)return;
+  return descargarValidacionDe(r);
+}
+async function descargarValidacionDe(r){
+  if(!r)return;
   try{
     prog('Generando Excel de validación…');
     const {data,error}=await SB.rpc('validar_detalle',{p_pais:r.pais,p_empresa:r.empresa,p_canal:r.canal});
@@ -2261,7 +2296,7 @@ function kpiRender(){
   const ST_TX={auto:'Activo (con publicaciones)',off:'Sin publicaciones',activo:'Activo (marcado a mano)',pendiente:'Pendiente',inactivo:'Inactivo / no creado'};
   const pillU=(u,txt)=>{const q=kPct(u.real,u.pos);
     const tip=`${u.canal+(u.empresa?' · '+u.empresa:'')} — ${ST_TX[u.st]}${u.man&&u.man.nota?' · '+u.man.nota:''} · ${fmt(u.real)} reales de ${fmt(u.pos)} posibles`;
-    const clic=esAdmin()?` onclick="kpiModalCanal(${kEsc(JSON.stringify({pais:u.pais,canal:u.canal,empresa:u.empresa||'*'}))})"`:'';
+    const clic=` onclick="kpiDetalle(${kEsc(JSON.stringify(u.pais))},${kEsc(JSON.stringify(u.canal))},${kEsc(JSON.stringify(u.empresa||'*'))})"`;
     return `<span class="u-pill st-${u.st}${clic?' clic':''}" title="${kEsc(tip)}"${clic}><span class="dot st-${u.st}"></span>${kEsc(txt)}${u.man&&u.st!=='activo'?`<i class="st-tag">${u.st==='pendiente'?'pendiente':'no creado'}</i>`:''}<b class="${q==null?'n':cls(q)}">${q==null?'—':q+'%'}</b></span>`};
   document.getElementById('k6Paises').innerHTML=ordP.length?ordP.map(p=>{
     const us=UNI.filter(u=>u.pais===p),on=us.filter(u=>u.activo).length;
@@ -2369,6 +2404,104 @@ async function kpiBorrarCanal(k){
   if(!confirm(`¿Quitar el estado manual de ${pais} · ${canal}${empresa!=='*'?' · '+empresa:''}?\nVuelve al estado automático (activo si tiene publicaciones).`))return;
   try{const {error}=await SB.from('kpi_canales').delete().match({pais,empresa,canal});if(error)throw error;await kpiRecargarCanales();}
   catch(e){alert('No se pudo quitar: '+(e.message||e));}
+}
+
+// ---- Detalle de un canal (clic en una etiqueta de "Canales publicados y activos por país") ----
+var KDET={unidad:null,titulos:null,lista:'fuera',filtro:''};
+function kpiFilasUnidad(pais,canal,empresa){
+  const propia=TIENDAS_PROPIAS.includes(canal);
+  const keys=new Set();
+  [...COBROWS,...PUBROWS,...DATA].forEach(r=>{if(r.pais===pais&&r.canal===canal&&(propia||r.empresa===empresa))keys.add(r.empresa)});
+  return [...keys].sort((a,b)=>kOrdEmp(a)-kOrdEmp(b)||a.localeCompare(b)).map(emp=>{
+    const d=DATA.find(r=>r.pais===pais&&r.canal===canal&&r.empresa===emp)||{};
+    const p=PUBROWS.find(r=>r.pais===pais&&r.canal===canal&&r.empresa===emp)||{};
+    const v=VALID_MAP[pais+'|'+emp+'|'+canal];
+    const validada=!!(v&&+v.publicadas>0);
+    return {pais,canal,empresa:emp,pos:pubMz(d)||0,real:d.pub||0,skuMz:skuMz(d)||0,skuPb:d.skuPb||0,
+      cargadas:p.pub||0,skuCarg:p.sku_pb||0,validada,
+      cumplen:validada?+v.cumplen:null,fuera:validada?+v.fuera:null,dup:validada&&v.duplicados!=null?+v.duplicados:null,
+      falt:v&&v.faltantes!=null?+v.faltantes:null,fecha:p.fecha||null};
+  });
+}
+function kpiExplicar(f){
+  const L=[];
+  if(!f.cargadas&&!f.real){L.push('No hay publicaciones cargadas para esta tienda.');return L;}
+  if(!f.validada){
+    L.push(`<b>Sin validar por título:</b> esta tienda no tiene títulos cargados, así que no se comparó contra la matriz. El % usa <b>todas</b> las publicaciones cargadas (${fmt(f.cargadas)}).`);
+    if(f.skuCarg&&f.cargadas/f.skuCarg>=3)L.push(`Esas ${fmt(f.cargadas)} publicaciones tienen solo <b>${fmt(f.skuCarg)} SKUs distintos</b> (≈${Math.round(f.cargadas/f.skuCarg)} publicaciones por SKU): probablemente variantes, publicaciones repetidas o del catálogo de otra empresa.`);
+    L.push('Para validarla, vuelve a cargar el export de esta tienda con la columna de <b>título</b> (📦 Cargar publicaciones).');
+  }else{
+    L.push(`De <b>${fmt(f.cargadas)}</b> publicaciones cargadas, <b>${fmt(f.cumplen)}</b> coinciden con un título de la matriz (son las que cuentan como reales).`);
+    if(f.fuera)L.push(`<b>${fmt(f.fuera)}</b> están fuera de la matriz (título distinto al de la matriz o producto que no está en ella).`);
+    if(f.dup)L.push(`<b>${fmt(f.dup)}</b> repiten un título ya contado (duplicados).`);
+    if(f.falt!=null)L.push(`Faltan <b>${fmt(f.falt)}</b> títulos de la matriz por publicar.`);
+  }
+  if(f.pos&&f.real>f.pos)L.push(`<b>Pasa del 100%</b> porque hay más publicaciones contadas (${fmt(f.real)}) que posibles en la matriz (${fmt(f.pos)}).`);
+  return L;
+}
+function kpiDetalle(pais,canal,empresa){
+  const filas=kpiFilasUnidad(pais,canal,empresa);
+  KDET={unidad:{pais,canal,empresa},filas,titulos:null,lista:'fuera',filtro:'',sel:null};
+  const propia=TIENDAS_PROPIAS.includes(canal);
+  const man=KPI.canales.find(c=>c.pais===pais&&c.canal===canal&&c.empresa===(propia?'*':empresa));
+  const tot=filas.reduce((a,f)=>({pos:a.pos+f.pos,real:a.real+f.real,cargadas:a.cargadas+f.cargadas}),{pos:0,real:0,cargadas:0});
+  const q=kPct(tot.real,tot.pos);
+  const ST={activo:'Activo (marcado a mano)',pendiente:'Pendiente',inactivo:'Inactivo / no creado'};
+  const estado=man?ST[man.estado]:(tot.cargadas>0?'Activo (con publicaciones)':'Sin publicaciones');
+  let h=`<div class="kd-head"><div><div class="kd-t">${FLAGS[pais]||''} ${kEsc(pais)} · ${kEsc(canal)}${propia?'':' · '+kEsc(empresa)}</div>
+      <div class="kd-s">Estado: <b>${estado}</b>${man&&man.nota?' · '+kEsc(man.nota):''}</div></div>
+      <div class="kd-big" style="color:${q==null?'var(--neutro)':col(q)}">${q==null?'—':q+'%'}<small>pub. reales ÷ posibles</small></div></div>`;
+  h+=`<div class="kd-kpis">
+      <div><span>Posibles (matriz)</span><b>${fmt(tot.pos)}</b></div>
+      <div><span>Reales (cuentan)</span><b>${fmt(tot.real)}</b></div>
+      <div><span>Cargadas</span><b>${fmt(tot.cargadas)}</b></div></div>`;
+  h+=`<div class="tbl-wrap" style="max-height:none;margin-top:12px"><table class="kd-tbl"><thead><tr>
+      <th class="l">Empresa</th><th>Pub. posibles</th><th>Pub. reales</th><th>%</th><th>SKU matriz</th><th>SKU publicados</th>
+      <th>Cargadas</th><th>Cumplen</th><th>Fuera</th><th>Dupl.</th><th>Faltan</th><th></th></tr></thead><tbody>`;
+  filas.forEach((f,i)=>{
+    h+=`<tr><td class="l">${kEsc(f.empresa)}${f.validada?'':' <span class="sv">sin validar</span>'}</td>
+      <td>${fmt(f.pos)}</td><td><b>${fmt(f.real)}</b></td><td>${pill(kPct(f.real,f.pos))}</td>
+      <td>${fmt(f.skuMz)}</td><td>${fmt(f.skuPb)}</td><td>${fmt(f.cargadas)}</td>
+      <td>${f.cumplen==null?'—':fmt(f.cumplen)}</td><td>${f.fuera==null?'—':fmt(f.fuera)}</td><td>${f.dup==null?'—':fmt(f.dup)}</td><td>${f.falt==null?'—':fmt(f.falt)}</td>
+      <td class="nw">${f.validada||f.falt?`<button class="btn-cov ghost kd-b" onclick="kpiVerTitulos(${i})">Ver títulos</button>`:''}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  h+=filas.map(f=>{const L=kpiExplicar(f);return L.length?`<div class="note kd-note">${filas.length>1?`<b>${kEsc(f.empresa)}:</b> `:''}${L.join(' ')}</div>`:''}).join('');
+  if(!filas.length)h+='<div class="note kd-note">Este canal no tiene datos en el panel: no está en Cobertura ni tiene publicaciones cargadas.</div>';
+  h+=`<div id="kdTit"></div>`;
+  if(esAdmin())h+=`<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn-cov ghost" onclick="document.getElementById('k6Det').style.display='none';kpiModalCanal(${kEsc(JSON.stringify({pais,canal,empresa:empresa||'*'}))})">Cambiar estado</button></div>`;
+  document.getElementById('kdBody').innerHTML=h;
+  document.getElementById('k6Det').style.display='flex';
+}
+async function kpiVerTitulos(i){
+  const f=KDET.filas[i];if(!f)return;
+  const box=document.getElementById('kdTit');
+  box.innerHTML='<div class="small" style="margin-top:12px">Cargando títulos…</div>';
+  try{
+    const {data,error}=await SB.rpc('validar_detalle',{p_pais:f.pais,p_empresa:f.empresa,p_canal:f.canal});
+    if(error)throw error;
+    KDET.titulos={cumplen:(data&&data.cumplen)||[],fuera:(data&&data.fuera)||[],duplicados:(data&&data.duplicados)||[],faltantes:(data&&data.faltantes)||[]};
+    KDET.sel=f;KDET.filtro='';
+    KDET.lista=KDET.titulos.fuera.length?'fuera':(KDET.titulos.faltantes.length?'faltantes':'cumplen');
+    kpiPintarTitulos();
+  }catch(e){box.innerHTML=`<div class="note kd-note">No se pudo leer el detalle: ${kEsc(e.message||e)}</div>`;}
+}
+function kpiPintarTitulos(){
+  const T=KDET.titulos,f=KDET.sel;if(!T)return;
+  const NOM={fuera:'Fuera de matriz',duplicados:'Duplicados',faltantes:'Faltantes por publicar',cumplen:'Cumplen'};
+  const q=normTitulo(KDET.filtro);
+  const rows=T[KDET.lista].filter(x=>!q||normTitulo((x.titulo||'')+' '+(x.sku||'')).includes(q));
+  const col3={fuera:['Motivo',x=>x.motivo||'No está en la matriz'],duplicados:['Ya contado en el SKU',x=>x.duplica_a||''],faltantes:['Tiene precio',x=>x.tiene_precio||''],cumplen:['Título en matriz',x=>x.titulo_matriz||'']}[KDET.lista];
+  let h=`<div class="kd-tabs">${Object.keys(NOM).map(k=>`<button class="${k===KDET.lista?'on':''}" onclick="KDET.lista='${k}';kpiPintarTitulos()">${NOM[k]} <b>${fmt(T[k].length)}</b></button>`).join('')}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">
+      <input class="objtxt" style="min-width:0;flex:1" placeholder="Buscar título o SKU…" value="${kEsc(KDET.filtro)}" oninput="KDET.filtro=this.value;clearTimeout(window._kdT);window._kdT=setTimeout(kpiPintarTitulos,250)">
+      <button class="btn-cov ghost" onclick="descargarValidacionDe(KDET.sel)">⬇ Excel completo</button></div>
+    <div class="small">${f.empresa} · ${fmt(rows.length)} de ${fmt(T[KDET.lista].length)}${rows.length>300?' · se muestran los primeros 300 (el Excel trae todo)':''}</div>
+    <div class="tbl-wrap" style="max-height:340px;margin-top:6px"><table class="kd-tbl"><thead><tr><th class="l">Título</th><th class="l">SKU</th><th class="l">${col3[0]}</th></tr></thead><tbody>
+    ${rows.slice(0,300).map(x=>`<tr><td class="l wr">${kEsc(x.titulo)}</td><td class="l">${kEsc(x.sku||'')}</td><td class="l wr dim">${kEsc(col3[1](x))}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">Sin filas.</td></tr>'}
+    </tbody></table></div>`;
+  const box=document.getElementById('kdTit');box.innerHTML=h;
+  const inp=box.querySelector('input');if(inp&&KDET.filtro){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
 }
 
 // ---- Lectura de Excel ----
