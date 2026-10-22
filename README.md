@@ -15,7 +15,7 @@ políticas RLS imponen quién puede hacer qué.
 ## Archivos
 | Archivo | Qué es |
 |---|---|
-| `index.html` | El dashboard (3 pestañas + login). |
+| `index.html` | El dashboard: sección **KPI** (gerencia) y sección **Operaciones** (5 pestañas del departamento de eCommerce) + login. |
 | `config.js` | URL + anon key de tu proyecto Supabase. |
 | `supabase_setup.sql` | Tablas + políticas RLS + triggers. Se corre una vez. |
 | `kpis_setup.sql` | Tablas de la pestaña KPIs · Canales. Se corre una vez. |
@@ -89,7 +89,12 @@ Una fila por listing, con estas columnas (los nombres se detectan solos):
 
 ---
 
-## Pestaña KPIs · Canales
+## Secciones
+- **KPI** (gerencia): enlace `…/#kpi`. Solo el tablero de indicadores, sin botones operativos.
+- **Operaciones** (departamento de eCommerce): enlace `…/#operaciones`. Detalle, Resumen, Cobertura, Validación y Objetivos, con carga de matriz, publicaciones y PDFs.
+- El panel abre en la última sección usada en ese navegador (por defecto, KPI). Ambas usan el mismo login y los mismos permisos.
+
+## Sección KPI
 Canales publicados y activos, ventas vs meta por canal, % de cumplimiento y política **6 fotos + 1 video**.
 Stock por país y publicaciones posibles quedan para la fase 2 (conexión con el ERP).
 

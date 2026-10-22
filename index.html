@@ -330,6 +330,17 @@
   .k6t-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
   .k6t-bar input{flex:1;min-width:220px;max-width:380px}
   table.k6t thead th .th-sort{color:#fff}
+  .secciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+  .secciones button{display:flex;align-items:center;gap:12px;text-align:left;font-family:'Inter';border:1px solid var(--linea);
+    background:var(--blanco);border-radius:12px;padding:12px 16px;cursor:pointer;color:var(--gris);transition:.15s}
+  .secciones button:hover{border-color:var(--azul-2)}
+  .secciones button .si{font-size:22px;line-height:1}
+  .secciones button b{display:block;font-family:'Barlow Condensed';font-size:20px;font-weight:700;color:var(--azul-tinta);line-height:1.1}
+  .secciones button small{font-size:12px}
+  .secciones button.on{background:var(--azul);border-color:var(--azul);color:#CFDBF0;box-shadow:inset 0 -3px 0 var(--ambar)}
+  .secciones button.on b{color:#fff}
+  body.sec-kpi .tabs, body.sec-kpi .ops-only{display:none!important}
+  @media(max-width:520px){.secciones button{padding:10px 12px}.secciones button small{display:none}}
   .kd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:4px}
   .kd-t{font-family:'Barlow Condensed';font-weight:700;font-size:21px;color:var(--azul-tinta)}
   .kd-s{font-size:12.5px;color:var(--gris);margin-top:2px}
@@ -379,7 +390,7 @@
 
   @media print{
     @page{size:A4;margin:11mm}
-    .head-actions,.dropzone,.tabs,.matsel,.chips,.fpanel,.modal-bg{display:none!important}
+    .head-actions,.dropzone,.tabs,.secciones,.matsel,.chips,.fpanel,.modal-bg{display:none!important}
     body{background:#fff}
     .tbl-wrap{max-height:none!important;overflow:visible!important}
     thead th,tr.grp-row td{position:static!important}
@@ -410,15 +421,15 @@
   <div class="head-inner">
     <div class="brand">
       <div class="eyebrow">Masia Group · Gestión E-commerce</div>
-      <h1>Cumplimiento de <b>Publicaciones</b></h1>
+      <h1 id="hTitulo">Cumplimiento de <b>Publicaciones</b></h1>
     </div>
     <div class="head-actions">
-      <button class="btn btn-ghost solo-admin" id="btnMatriz" onclick="document.getElementById('fileMatriz').click()">📋 Cargar matriz</button>
+      <button class="btn btn-ghost solo-admin ops-only" id="btnMatriz" onclick="document.getElementById('fileMatriz').click()">📋 Cargar matriz</button>
       <input id="fileMatriz" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarMatriz(event)">
-      <button class="btn btn-solid" onclick="document.getElementById('filePub').click()">📦 Cargar publicaciones</button>
+      <button class="btn btn-solid ops-only" onclick="document.getElementById('filePub').click()">📦 Cargar publicaciones</button>
       <input id="filePub" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="cargarPublicaciones(event)">
-      <button class="btn btn-ghost" onclick="pdfPanel()">🖨 PDF panel</button>
-      <button class="btn btn-ghost" onclick="pdfEjecutivo()">📄 PDF ejecutivo</button>
+      <button class="btn btn-ghost ops-only" onclick="pdfPanel()">🖨 PDF panel</button>
+      <button class="btn btn-ghost ops-only" onclick="pdfEjecutivo()">📄 PDF ejecutivo</button>
       <span id="sesion" class="sesion"></span>
       <button id="btnLogout" class="btn btn-ghost" onclick="doLogout()" style="display:none">Cerrar sesión</button>
     </div>
@@ -426,13 +437,16 @@
 </header>
 
 <div class="wrap">
+  <nav class="secciones" aria-label="Secciones">
+    <button id="secKpi" onclick="setSeccion('kpi')"><span class="si">📊</span><span><b>KPI</b><small>Gerencia</small></span></button>
+    <button id="secOps" onclick="setSeccion('ops')"><span class="si">🛠</span><span><b>Operaciones</b><small>Departamento de eCommerce</small></span></button>
+  </nav>
   <div class="tabs">
     <button class="tab on" id="tab1" onclick="setPage(1)">Detalle por plataforma</button>
     <button class="tab" id="tab2" onclick="setPage(2)">Resumen general · Matriz</button>
     <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
     <button class="tab" id="tab4" onclick="setPage(4)">Validación · Títulos</button>
     <button class="tab" id="tab5" onclick="setPage(5)">Objetivos · Semana</button>
-    <button class="tab" id="tab6" onclick="setPage(6)">KPIs · Canales</button>
   </div>
 
   <!-- ===================== PÁGINA 1 ===================== -->
@@ -1031,10 +1045,36 @@ function upd(idx,campo,el){
 }
 function setMetrica(m){METRICA=m;
   document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
+// ===== Secciones: KPI (gerencia) · Operaciones (departamento de eCommerce) =====
+// Cada sección tiene su enlace: …/#kpi y …/#operaciones
+var SECCION='kpi', SECCION_OPS_PAGE=1;
+const SECC_TXT={kpi:{h:'Indicadores <b>e-Commerce</b>',t:'KPI · E-commerce Masia Group'},
+                ops:{h:'Cumplimiento de <b>Publicaciones</b>',t:'Operaciones · Cumplimiento de Publicaciones · E-commerce Masia Group'}};
+function seccionInicial(){
+  const h=(location.hash||'').replace('#','').toLowerCase();
+  if(h==='kpi')return 'kpi';
+  if(h.startsWith('oper')||h==='ops')return 'ops';
+  try{const g=localStorage.getItem('masia_seccion');if(g==='kpi'||g==='ops')return g;}catch(e){}
+  return 'kpi';
+}
+function setSeccion(sec,sinHash){
+  SECCION=sec==='ops'?'ops':'kpi';
+  document.body.classList.toggle('sec-kpi',SECCION==='kpi');
+  document.body.classList.toggle('sec-ops',SECCION==='ops');
+  document.getElementById('secKpi').classList.toggle('on',SECCION==='kpi');
+  document.getElementById('secOps').classList.toggle('on',SECCION==='ops');
+  document.getElementById('hTitulo').innerHTML=SECC_TXT[SECCION].h;
+  document.title=SECC_TXT[SECCION].t;
+  try{localStorage.setItem('masia_seccion',SECCION);}catch(e){}
+  if(!sinHash){const nh=SECCION==='kpi'?'#kpi':'#operaciones';if(location.hash!==nh)history.replaceState(null,'',nh);}
+  setPage(SECCION==='kpi'?6:SECCION_OPS_PAGE);
+}
+window.addEventListener('hashchange',()=>{const s=seccionInicial();if(s!==SECCION)setSeccion(s,true);});
 function setPage(n){PAGE=n;
+  if(n!==6)SECCION_OPS_PAGE=n;
   for(let i=1;i<=6;i++){
     document.getElementById('page'+i).classList.toggle('on',n===i);
-    document.getElementById('tab'+i).classList.toggle('on',n===i);
+    const t=document.getElementById('tab'+i);if(t)t.classList.toggle('on',n===i);
   }
   if(n===4&&SB){if(VALID_CACHE)pintarValidacion();else cargarValidacion();}
   if(n===5&&SB)renderObjetivos();
@@ -2130,6 +2170,7 @@ async function entrarApp(){
   gatearUI();
   if(ME.paises&&ME.paises.length)FILT.pais=new Set(ME.paises); // filtro por defecto, no candado
   await cargarTodo();   // el panel se pinta YA con la última validación guardada…
+  if(PAGE===6)kpiAbrir();
   // …y en segundo plano se regenera la validación completa; al terminar, el panel se refresca solo.
   regenerarValidacion(null,{objetivos:true}).catch(()=>{});
 }
@@ -2821,6 +2862,7 @@ async function initApp(){
   if(session)await entrarApp();
   else ov.style.display='flex';
 }
+setSeccion(seccionInicial(),true);
 initApp();
 </script>
 </body>
