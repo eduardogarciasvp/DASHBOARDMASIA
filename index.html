@@ -685,7 +685,9 @@
 <script>
 // ===== Listas maestras =====
 const FLAGS={"México":"🇲🇽","Colombia":"🇨🇴","Estados Unidos":"🇺🇸","Brasil":"🇧🇷","Venezuela":"🇻🇪","España":"🇪🇸"};
-const ORD_PAIS=["México","Colombia","Estados Unidos","Brasil","Venezuela","España"];
+// Orden alfabético de países en todo el panel
+const ORD_PAIS=["Brasil","Colombia","España","Estados Unidos","México","Venezuela"];
+const ordValid=a=>a.sort((x,y)=>{const i=ORD_PAIS.indexOf(x.pais),j=ORD_PAIS.indexOf(y.pais);return (i<0?99:i)-(j<0?99:j)||String(x.empresa).localeCompare(String(y.empresa))||String(x.canal).localeCompare(String(y.canal))});
 const CANALES=["Masia Shop","Xstore Shop","Mercado Libre","Amazon","eBay","Camozzi Shop"];
 // Tiendas propias: cuentan como UNA unidad por país (no por empresa).
 const TIENDAS_PROPIAS=["Masia Shop","Xstore Shop","Camozzi Shop"];
@@ -1879,7 +1881,7 @@ function regenerarValidacion(tiendas,opts){
 async function refrescarResumenValidacion(){
   const {data,error}=await SB.rpc('validar_resumen');
   if(error)throw error;
-  VALID_CACHE=data||[];
+  VALID_CACHE=ordValid(data||[]);
   VALID_MAP={};VALID_CACHE.forEach(x=>VALID_MAP[x.pais+'|'+x.empresa+'|'+x.canal]=x);
   rebuildDATA();render();
   if(PAGE===4)pintarValidacion();
@@ -2032,7 +2034,7 @@ async function cargarTodo(){
   if(err){alert('Error cargando datos: '+err.message);return}
   MATRIZ_AGG={};(mz.data||[]).forEach(m=>MATRIZ_AGG[m.empresa]={pub:m.pub,sku:m.sku,lineas:m.lineas||{}});
   COBROWS=cob.data||[]; PUBROWS=pub.data||[];
-  if(!val.error){VALID_CACHE=val.data||[];VALID_MAP={};VALID_CACHE.forEach(r=>VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal]=r);}
+  if(!val.error){VALID_CACHE=ordValid(val.data||[]);VALID_MAP={};VALID_CACHE.forEach(r=>VALID_MAP[r.pais+'|'+r.empresa+'|'+r.canal]=r);}
   OBJ_MAP={};if(!ot.error)(ot.data||[]).forEach(o=>OBJ_MAP[o.pais+'|'+o.empresa+'|'+o.canal]=o);
   CUSTOM_OBJS=op.error?[]:(op.data||[]);
   rebuildDATA(); render();
