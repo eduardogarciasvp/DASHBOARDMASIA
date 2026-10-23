@@ -659,7 +659,7 @@
 
     <div class="note">
       <b>Cómo se calcula:</b><br>
-      • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b> (fuera de EE.UU. incluye a Xstore), <b>Xstore Shop</b> (solo Estados Unidos) y <b>Camozzi Shop</b> (solo Venezuela y Colombia). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
+      • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b> (fuera de EE.UU. incluye a Xstore), <b>Xstore Shop</b> (solo Estados Unidos) y <b>Camozzi Shop</b> (solo Venezuela y Colombia; Camozzi no vende por la Masia Shop). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
       • <b>Estado manual</b>: el equipo de eCommerce puede marcar un canal como <b>Activo</b> (existe aunque no tenga datos cargados), <b>Pendiente</b> o <b>Inactivo / no creado</b>; los dos últimos cuentan en el total pero no como activos.<br>
       • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de Operaciones › Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas.<br>
       • <b>Ventas y meta</b> en USD netos, por mes · país · empresa · canal.<br>
@@ -753,9 +753,12 @@ const CANALES=["Masia Shop","Xstore Shop","Mercado Libre","Amazon","eBay","Camoz
 const TIENDAS_PROPIAS=["Masia Shop","Xstore Shop","Camozzi Shop"];
 // Tiendas que solo existen en ciertos países
 const TIENDA_PAISES={"Xstore Shop":["Estados Unidos"],"Camozzi Shop":["Venezuela","Colombia"]};
-// Tienda propia de Xstore: en Estados Unidos es la Xstore Shop; en los demás países es la Masia Shop con empresa Xstore.
+// Tiendas propias por empresa:
+//  · Xstore: Xstore Shop en Estados Unidos; Masia Shop · Xstore en los demás países.
+//  · Camozzi: siempre Camozzi Shop (Camozzi no vende por la Masia Shop).
 function kTienda(pais,empresa,canal){
   if(empresa==='Xstore'&&(canal==='Masia Shop'||canal==='Xstore Shop'))return pais==='Estados Unidos'?'Xstore Shop':'Masia Shop';
+  if(empresa==='Camozzi'&&canal==='Masia Shop')return 'Camozzi Shop';
   return canal;
 }
 const esXstoreShop=v=>{const k=String(v==null?'':v).toLowerCase();return /xstore/.test(k)&&/shop|shopify|tienda|web/.test(k)};
@@ -1127,7 +1130,7 @@ function findCol(keys,cands){return keys.find(k=>cands.includes(k.toLowerCase().
 // País: acepta códigos (MX, USA, CO...) y nombres
 const PAIS_ALIAS={mx:'México','méxico':'México',mexico:'México',co:'Colombia',colombia:'Colombia',
   usa:'Estados Unidos',us:'Estados Unidos',eeuu:'Estados Unidos','estados unidos':'Estados Unidos','united states':'Estados Unidos',
-  br:'Brasil',brasil:'Brasil',brazil:'Brasil',ve:'Venezuela',venezuela:'Venezuela',
+  br:'Brasil',brasil:'Brasil',brazil:'Brasil',ve:'Venezuela',venezuela:'Venezuela','ccc ve':'Venezuela',
   es:'España','españa':'España',espana:'España',spain:'España'};
 function normPais(v){const k=String(v==null?'':v).trim().toLowerCase();return PAIS_ALIAS[k]||String(v==null?'':v).trim();}
 function normCanal(v){const k=String(v==null?'':v).trim().toLowerCase();
@@ -1617,7 +1620,7 @@ async function agregarCobertura(){
   const canales=[...document.querySelectorAll('.covcanal:checked')].map(c=>c.value);
   if(!pais||!empresa||!canales.length){alert('Elige país, empresa y al menos un canal.');return}
   const fuera=canales.filter(c=>TIENDA_PAISES[c]&&!TIENDA_PAISES[c].includes(pais));
-  const filas=canales.filter(c=>!fuera.includes(c)).map(canal=>({pais,empresa,canal}));
+  const filas=[...new Map(canales.filter(c=>!fuera.includes(c)).map(c=>kTienda(pais,empresa,c)).map(canal=>[canal,{pais,empresa,canal}])).values()];
   if(fuera.length)alert(fuera.map(c=>`${c} solo opera en ${TIENDA_PAISES[c].join(' y ')}: no se agrega en ${pais}.`).join('\n'));
   if(!filas.length)return;
   try{
