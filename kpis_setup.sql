@@ -149,3 +149,71 @@ create or replace view public.kpi_inventario_resumen with (security_invoker = tr
   from public.kpi_inventario
   group by pais, empresa;
 grant select on public.kpi_inventario_resumen to authenticated;
+
+-- ============================================================
+-- 5) STOCK vs PUBLICACIONES (sección del Dashboard)
+--    Cruza inventario → matriz (SKU completo) → títulos publicados.
+-- ============================================================
+create index if not exists idx_mt_sku_norm on public.matriz_titulos (upper(btrim(sku)));
+create index if not exists idx_pt_tienda_tit on public.pub_titulos (pais, empresa, canal, titulo_norm);
+
+-- Por SKU con stock y tienda: posibles (productos de la matriz con ese SKU, con precio, en el
+-- idioma del país), creadas (ya publicadas, misma regla que la validación), con_sku (publicaciones
+-- de la tienda con ese SKU aunque no sigan la matriz) y validada (la tienda tiene títulos cargados).
+create or replace function public.stock_vs_publicaciones(p_pais text default null)
+returns table(pais text, empresa text, canal text, sku text, stock numeric,
+              posibles bigint, creadas bigint, con_sku bigint, validada boolean)
+language sql stable set search_path = public as $$
+  with inv as (
+    select i.pais, i.empresa as inv_emp, upper(btrim(i.sku)) as sku, sum(i.stock) as stock
+    from kpi_inventario i
+    where i.stock > 0 and (p_pais is null or i.pais = p_pais)
+    group by 1, 2, 3
+  ), tiendas as (
+    select distinct t.pais, t.empresa, t.canal
+    from (select c.pais, c.empresa, c.canal from cobertura c
+          union select p.pais, p.empresa, p.canal from publicaciones p) t
+    where p_pais is null or t.pais = p_pais
+  ), mz as (
+    select t.pais, t.empresa, t.canal, inv.sku, inv.stock, m.titulo_norm,
+           coalesce(m.fila, m.titulo_norm) as fila
+    from inv
+    join tiendas t on t.pais = inv.pais and (inv.inv_emp = '*' or inv.inv_emp = t.empresa)
+    join matriz_titulos m on m.empresa = t.empresa and upper(btrim(m.sku)) = inv.sku
+         and m.tiene_precio = 'SI'
+         and (m.idioma is null or m.idioma = case when t.pais = 'Estados Unidos' then 'EN' else 'ES' end)
+  ), agg as (
+    select mz.pais, mz.empresa, mz.canal, mz.sku, max(mz.stock) as stock,
+           count(distinct mz.fila) as posibles,
+           count(distinct mz.fila) filter (where exists (
+             select 1 from pub_titulos p
+             where p.pais = mz.pais and p.empresa = mz.empresa and p.canal = mz.canal
+               and p.titulo_norm = mz.titulo_norm)) as creadas
+    from mz group by 1, 2, 3, 4
+  )
+  select a.pais, a.empresa, a.canal, a.sku, a.stock, a.posibles, a.creadas,
+         (select count(*) from pub_titulos p
+           where p.pais = a.pais and p.empresa = a.empresa and p.canal = a.canal
+             and (upper(btrim(p.sku)) = a.sku
+                  or (a.canal ~* 'amazon' and upper(btrim(p.sku)) like a.sku || '-%'))) as con_sku,
+         exists (select 1 from pub_titulos p
+                  where p.pais = a.pais and p.empresa = a.empresa and p.canal = a.canal) as validada
+  from agg a;
+$$;
+
+-- Títulos de la matriz de un SKU que faltan por publicar en una tienda.
+create or replace function public.stock_faltantes(p_pais text, p_empresa text, p_canal text, p_sku text)
+returns table(titulo text, sku text)
+language sql stable set search_path = public as $$
+  select min(m.titulo), max(m.sku)
+  from matriz_titulos m
+  where m.empresa = p_empresa and upper(btrim(m.sku)) = upper(btrim(p_sku)) and m.tiene_precio = 'SI'
+    and (m.idioma is null or m.idioma = case when p_pais = 'Estados Unidos' then 'EN' else 'ES' end)
+    and not exists (select 1 from pub_titulos p
+                    where p.pais = p_pais and p.empresa = p_empresa and p.canal = p_canal
+                      and p.titulo_norm = m.titulo_norm)
+  group by coalesce(m.fila, m.titulo_norm)
+  order by 1;
+$$;
+grant execute on function public.stock_vs_publicaciones(text) to authenticated;
+grant execute on function public.stock_faltantes(text, text, text, text) to authenticated;

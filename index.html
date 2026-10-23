@@ -348,6 +348,13 @@
   .msel:hover{border-color:var(--azul-2)}
   .msel.act{border-color:var(--azul);background:#EAF0FA;color:var(--azul);font-weight:600}
   .fpanel-list label.msel-all{border-bottom:1px solid var(--linea);border-radius:6px 6px 0 0;font-weight:600}
+  .stk-res{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px}
+  .stk-res div{background:var(--blanco);border:1px solid var(--linea);border-radius:10px;padding:10px 13px}
+  .stk-res span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);font-weight:600}
+  .stk-res b{font-family:'Barlow Condensed';font-size:24px;color:var(--azul-tinta)}
+  .stk-res em{font-style:normal;margin-left:8px;vertical-align:4px}
+  table.k6t tr.clic{cursor:pointer} table.k6t tr.clic:hover td{background:#F1F5FB}
+  @media(max-width:760px){.stk-res{grid-template-columns:1fr 1fr}}
   .carga-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
   .carga{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:15px 16px;display:flex;flex-direction:column;gap:10px}
   .cg-h{display:flex;gap:11px;align-items:flex-start}
@@ -653,8 +660,12 @@
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Inventario por país</h2><span class="hint">Carga manual mientras se conecta el ERP. Respeta los filtros de país y empresa. Próximo paso: comparar las publicaciones reales contra las posibles <b>con stock</b>.</span></div>
+      <div class="sec-h"><h2>Inventario por país</h2><span class="hint">Carga manual mientras se conecta el ERP. Respeta los filtros de país y empresa.</span></div>
       <div id="k6Inv"></div>
+    </div>
+    <div class="sec">
+      <div class="sec-h"><h2>Stock vs publicaciones</h2><span class="hint">Por cada SKU con stock: cuántas publicaciones permite según la matriz (mismo SKU completo) y cuántas ya están creadas en cada tienda del país.</span></div>
+      <div id="k6Stk"></div>
     </div>
 
     <div class="note">
@@ -663,6 +674,7 @@
       • <b>Estado manual</b>: el equipo de eCommerce puede marcar un canal como <b>Activo</b> (existe aunque no tenga datos cargados), <b>Pendiente</b> o <b>Inactivo / no creado</b>; los dos últimos cuentan en el total pero no como activos.<br>
       • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de Operaciones › Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas.<br>
       • <b>Ventas y meta</b> en USD netos, por mes · país · empresa · canal.<br>
+      • <b>Stock vs publicaciones</b>: para cada SKU con stock, <b>posibles</b> = productos de la matriz con ese SKU completo (con precio, en el idioma del país) en cada tienda del país; <b>creadas</b> = los que ya tienen su título publicado. Las tiendas sin títulos cargados salen como <b>sin validar</b> y no entran en el %.<br>
       • <b>Período</b>: ventas y metas suman los meses marcados en la línea de tiempo (por defecto, enero al mes en curso; la meta del mes en curso cuenta completa).<br>
       • <b>Política 6 + 1</b> = publicaciones con <b>6 fotos o más</b> y <b>al menos 1 video</b>, sobre las publicaciones revisadas.<br>
       • Semáforo <b>% meta</b>: <b style="color:var(--rojo)">0–49%</b> · <b style="color:#9A7A12">50–74%</b> · <b style="color:var(--verde)">75%+</b>. Semáforo <b>publicaciones</b> (también canales activos y 6 + 1): <b style="color:var(--rojo)">0–69%</b> · <b style="color:#9A7A12">70–89%</b> · <b style="color:var(--verde)">90%+</b>. Semáforo <b>SKU</b>: <b style="color:var(--rojo)">0–69%</b> · <b style="color:#9A7A12">70–99%</b> · <b style="color:var(--verde)">100%+</b>.
@@ -2228,7 +2240,7 @@ async function doLogout(){try{await SB.auth.signOut()}catch(e){}location.reload(
 // ===== Pestaña 6 · KPIs por canal (ventas, meta, activos, 6+1) =====
 // Se carga SOLO al abrir la pestaña (no frena la carga inicial del panel).
 // ===================================================================
-var KPI={cargado:false,cargando:false,ventas:[],medios:[],canales:[],inv:[],faltaSQL:false,faltaCanales:false,faltaInv:false};
+var KPI={cargado:false,cargando:false,ventas:[],medios:[],canales:[],inv:[],stk:[],faltaSQL:false,faltaCanales:false,faltaInv:false,faltaStk:false};
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const kEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const kUSD=n=>'$ '+Math.round(n||0).toLocaleString('de-DE');
@@ -2273,6 +2285,8 @@ async function kpiAbrir(force){
   catch(e){KPI.canales=[];KPI.faltaCanales=true;}
   try{KPI.inv=await kpiSelTodo('kpi_inventario_resumen');KPI.faltaInv=false;}
   catch(e){KPI.inv=[];KPI.faltaInv=true;}
+  try{KPI.stk=KPI.inv.length?await kpiRpcTodo('stock_vs_publicaciones'):[];KPI.faltaStk=false;}
+  catch(e){KPI.stk=[];KPI.faltaStk=true;}
   kpiFiltros();kpiRender();kpiPintarCargas();
 }
 
@@ -2506,7 +2520,7 @@ function kpiRender(){
 
   // Detalle por tienda (tabla estilo Excel)
   KPI._tiendas=tiendas;kpiTabla();
-  kpiInvRender();
+  kpiInvRender();kpiStkRender();
   if(PAGE===7)kpiPintarCargas();
 }
 
@@ -2724,6 +2738,7 @@ function kpiDetalle(pais,canal,empresa){
   if(!filas.length)h+='<div class="note kd-note">Este canal no tiene datos en el panel: no está en Cobertura ni tiene publicaciones cargadas.</div>';
   h+=`<div id="kdTit"></div>`;
   document.getElementById('kdBody').innerHTML=h;
+  document.getElementById('k6Det').querySelector('.modal-h h3').textContent='Detalle del canal';
   document.getElementById('k6Det').style.display='flex';
 }
 async function kpiVerTitulos(i){
@@ -2776,6 +2791,9 @@ function kpiInvRender(){
       <div class="ct"><span class="cn"><span class="flag">${FLAGS[p]||''}</span> ${kEsc(p)}</span><span class="cp" style="color:var(--azul)">${fmt(o.skus_stock)}</span></div>
       <div class="cv">SKUs con stock · <b>${fmt(Math.round(o.unidades))}</b> unidades</div>
       ${o.emps.length>1?`<div class="cl"><span>${o.emps.sort((a,b)=>kOrdEmp(a.empresa)-kOrdEmp(b.empresa)).map(e=>`${kEsc(e.empresa)} <b>${fmt(e.skus_stock)}</b>`).join(' · ')}</span></div>`:''}
+      ${(()=>{const sk=kpiStkSkus(kpiStkFilas().filter(r=>r.pais===p));if(!sk.length)return `<div class="cl"><span>Ningún SKU con stock está en la matriz</span></div>`;
+        const t=sk.reduce((a,x)=>({pos:a.pos+x.pos,posVal:a.posVal+x.posVal,cre:a.cre+x.cre}),{pos:0,posVal:0,cre:0});
+        return `<div class="cl" title="${fmt(t.pos-t.posVal)} posibles en tiendas sin validar"><span>Pub. posibles con stock <b>${fmt(t.pos)}</b> · creadas <b>${fmt(t.cre)}</b></span>${pill(kPct(t.cre,t.posVal))}</div>`})()}
       <div class="cl"><span>SKUs en el archivo <b>${fmt(o.skus)}</b></span><span>Carga: ${fF(o.fecha)}</span></div>
     </div>`}).join('')+'</div>';
 }
@@ -2910,11 +2928,124 @@ function kpiReportePDF(){
     H+=`<div class="rep-page">${head('Inventario por país')}<table class="rep"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th>SKUs con stock</th><th>Unidades</th><th>SKUs en archivo</th><th>Última carga</th></tr></thead><tbody>`;
     inv.slice().sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)||kOrdEmp(a.empresa)-kOrdEmp(b.empresa)).forEach(r=>{
       H+=`<tr><td class="l">${FLAGS[r.pais]||''} ${kEsc(r.pais)}</td><td class="l">${r.empresa==='*'?'—':kEsc(r.empresa)}</td><td>${fmt(r.skus_stock)}</td><td>${fmt(Math.round(r.unidades))}</td><td>${fmt(r.skus)}</td><td>${r.fecha?new Date(r.fecha).toLocaleDateString('es'):'—'}</td></tr>`;});
-    H+='</tbody></table><div class="small" style="margin-top:8px">Inventario cargado manualmente mientras se conecta el ERP.</div>'+foot+'</div>';
+    H+='</tbody></table><div class="small" style="margin-top:8px">Inventario cargado manualmente mientras se conecta el ERP.</div>';
+    const sk=kpiStkSkus(kpiStkFilas()).sort((a,b)=>b.falt-a.falt);
+    if(sk.length){
+      H+=`<div class="rep-sub">Stock vs publicaciones (SKUs con stock)</div><table class="rep"><thead><tr><th class="l">País</th><th class="l">SKU</th><th>Stock</th><th>Pub. posibles</th><th>Creadas</th><th>Faltan</th><th>Sin validar</th><th>%</th></tr></thead><tbody>`;
+      sk.slice(0,40).forEach(o=>{H+=`<tr><td class="l">${FLAGS[o.pais]||''} ${kEsc(o.pais)}</td><td class="l">${kEsc(o.sku)}</td><td>${fmt(Math.round(o.stock))}</td><td>${fmt(o.pos)}</td><td>${fmt(o.cre)}</td><td>${fmt(o.falt)}</td><td>${o.sv?fmt(o.sv):'—'}</td><td>${pp(o.pct)}</td></tr>`;});
+      H+='</tbody></table>'+(sk.length>40?`<div class="small">Se muestran los 40 SKUs con más publicaciones faltantes de ${fmt(sk.length)}.</div>`:'');
+    }
+    H+=foot+'</div>';
   }
   document.getElementById('reporte').innerHTML=H;
   document.body.classList.add('modo-reporte');
   window.print();
+}
+
+// ---- Stock vs publicaciones: cuántas publicaciones permite cada SKU con stock y cuántas están creadas ----
+// Fuente: función stock_vs_publicaciones() en Supabase (inventario → matriz por SKU completo → títulos publicados).
+async function kpiRpcTodo(fn,args){
+  let out=[],i=0;
+  for(;;){
+    const {data,error}=await SB.rpc(fn,args||{}).range(i,i+999);
+    if(error)throw error;
+    out=out.concat(data||[]);
+    if(!data||data.length<1000)break;
+    i+=1000;
+  }
+  return out;
+}
+var KSTK={q:'',sel:null};
+function kpiStkFilas(){
+  return (KPI.stk||[]).filter(r=>kOk('pais',r.pais)&&kOk('empresa',r.empresa)&&kOk('canal',r.canal));
+}
+// Agrupa por país · SKU. El % se mide solo en tiendas con títulos cargados (validadas).
+function kpiStkSkus(rows){
+  const G={};
+  rows.forEach(r=>{const k=r.pais+'|'+r.sku;
+    const o=G[k]=G[k]||{pais:r.pais,sku:r.sku,stock:+r.stock||0,tiendas:[],pos:0,posVal:0,cre:0,sinVal:0,fuera:0};
+    o.tiendas.push(r);o.pos+=+r.posibles;
+    if(r.validada){o.posVal+=+r.posibles;o.cre+=+r.creadas;o.fuera+=Math.max(0,(+r.con_sku)-(+r.creadas));}
+    else o.sinVal++;});
+  return Object.values(G).map(o=>({...o,falt:Math.max(0,o.posVal-o.cre),sv:o.pos-o.posVal,pct:kPct(o.cre,o.posVal),
+    estado:!o.posVal?'sv':(o.cre>=o.posVal?'ok':'inc')}));
+}
+function kpiStkRender(){
+  const el=document.getElementById('k6Stk');if(!el)return;
+  if(KPI.faltaStk){el.innerHTML='<div class="stock-ph">Falta la función <code>stock_vs_publicaciones</code> en Supabase.</div>';return}
+  const rows=kpiStkFilas();
+  if(!rows.length){el.innerHTML=`<div class="stock-ph">${(KPI.inv||[]).length?'Ningún SKU con stock coincide con la matriz para este filtro.':'Sin inventario cargado.'} El cruce usa el <b>SKU completo</b> del inventario contra el SKU de la matriz.</div>`;return}
+  const skus=kpiStkSkus(rows);
+  const q=normTitulo(KSTK.q);
+  let L=skus.filter(o=>!q||normTitulo(o.sku+' '+o.pais).includes(q));
+  L.sort((a,b)=>b.falt-a.falt||ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)||a.sku.localeCompare(b.sku));
+  const T=skus.reduce((a,o)=>({pos:a.pos+o.pos,posVal:a.posVal+o.posVal,cre:a.cre+o.cre,falt:a.falt+o.falt,sv:a.sv+o.sv,ok:a.ok+(o.estado==='ok'?1:0)}),{pos:0,posVal:0,cre:0,falt:0,sv:0,ok:0});
+  const EST={ok:'<span class="estado on">Completo</span>',inc:'<span class="estado off">Faltan publicaciones</span>',sv:'<span class="estado nc">Sin validar</span>'};
+  let h=`<div class="stk-res">
+      <div><span>SKUs con stock en la matriz</span><b>${fmt(skus.length)}</b></div>
+      <div><span>Publicaciones posibles</span><b>${fmt(T.pos)}</b></div>
+      <div><span>Creadas</span><b>${fmt(T.cre)}</b><em>${pill(kPct(T.cre,T.posVal))}</em></div>
+      <div><span>Faltan por crear</span><b style="color:${T.falt?'var(--rojo)':'inherit'}">${fmt(T.falt)}</b></div>
+      <div><span>En tiendas sin validar</span><b style="color:var(--gris)">${fmt(T.sv)}</b></div>
+      <div><span>SKUs con todo creado</span><b>${fmt(T.ok)} / ${fmt(skus.length)}</b></div></div>
+    <div class="small" style="margin:-4px 0 10px">Posibles = creadas + faltan + en tiendas sin validar. El % compara creadas contra las posibles de las tiendas validadas.</div>`;
+  h+=`<div class="k6t-bar"><input class="objtxt" placeholder="Buscar SKU…" value="${kEsc(KSTK.q)}" oninput="KSTK.q=this.value;clearTimeout(window._ksq);window._ksq=setTimeout(()=>{kpiStkRender();const i=document.querySelector('#k6Stk input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
+    <span class="small" style="margin:0">${fmt(L.length)} SKU · ordenados por publicaciones faltantes · clic en un SKU para ver el detalle por tienda</span></div>
+    <div class="tbl-wrap"><table class="k6t" style="min-width:820px"><thead><tr><th class="l">País</th><th class="l">SKU</th><th>Stock</th><th>Tiendas</th><th>Pub. posibles</th><th>Creadas</th><th>Faltan</th><th title="Posibles en tiendas sin títulos cargados">Sin validar</th><th>%</th><th class="l">Estado</th></tr></thead><tbody>`;
+  h+=L.slice(0,300).map(o=>`<tr class="clic" onclick="kpiStkDetalle(${kEsc(JSON.stringify(o.pais))},${kEsc(JSON.stringify(o.sku))})">
+      <td class="l">${FLAGS[o.pais]||''} ${kEsc(o.pais)}</td><td class="l"><b>${kEsc(o.sku)}</b></td><td>${fmt(Math.round(o.stock))}</td>
+      <td>${o.tiendas.length}</td>
+      <td>${fmt(o.pos)}</td><td>${fmt(o.cre)}</td><td>${o.falt?`<b style="color:var(--rojo)">${fmt(o.falt)}</b>`:'0'}</td><td class="dim">${o.sv?fmt(o.sv)+` <span class="sv">${o.sinVal} tienda${o.sinVal>1?'s':''}</span>`:'—'}</td><td>${pill(o.pct)}</td><td class="l">${EST[o.estado]}</td></tr>`).join('')
+    ||'<tr><td colspan="10" class="empty">Ningún SKU coincide con la búsqueda.</td></tr>';
+  if(L.length>300)h+=`<tr><td colspan="10" class="empty">Se muestran 300 de ${fmt(L.length)}; usa el buscador.</td></tr>`;
+  el.innerHTML=h+'</tbody></table></div>';
+}
+function kpiStkDetalle(pais,sku){
+  const rows=kpiStkFilas().filter(r=>r.pais===pais&&r.sku===sku)
+    .sort((a,b)=>CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal)||kOrdEmp(a.empresa)-kOrdEmp(b.empresa));
+  const o=kpiStkSkus(rows)[0];if(!o)return;
+  KSTK.sel={pais,sku,rows};
+  let h=`<div class="kd-head"><div><div class="kd-t">${FLAGS[pais]||''} ${kEsc(pais)} · ${kEsc(sku)}</div>
+      <div class="kd-s">Stock: <b>${fmt(Math.round(o.stock))}</b> · presente en la matriz de ${[...new Set(rows.map(r=>r.empresa))].map(kEsc).join(', ')}</div></div>
+      <div class="kd-big" style="color:${o.pct==null?'var(--neutro)':col(o.pct)}">${o.pct==null?'—':o.pct+'%'}<small>creadas ÷ posibles</small></div></div>
+    <div class="kd-kpis" style="grid-template-columns:repeat(4,1fr)"><div><span>Publicaciones posibles</span><b>${fmt(o.pos)}</b></div><div><span>Creadas</span><b>${fmt(o.cre)}</b></div><div><span>Faltan por crear</span><b style="color:${o.falt?'var(--rojo)':'inherit'}">${fmt(o.falt)}</b></div><div><span>En tiendas sin validar</span><b style="color:var(--gris)">${fmt(o.sv)}</b></div></div>
+    <div class="tbl-wrap" style="max-height:none;margin-top:12px"><table class="kd-tbl"><thead><tr><th class="l">Canal</th><th class="l">Empresa</th><th>Posibles</th><th>Creadas</th><th>Faltan</th><th>%</th><th title="Publicaciones de la tienda con este SKU cuyo título no está en la matriz">Con el SKU fuera de matriz</th><th></th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{const f=Math.max(0,r.posibles-r.creadas),fu=Math.max(0,r.con_sku-r.creadas);
+    h+=`<tr><td class="l">${kEsc(r.canal)}</td><td class="l">${kEsc(r.empresa)}${r.validada?'':' <span class="sv">sin validar</span>'}</td>
+      <td>${fmt(r.posibles)}</td><td>${r.validada?fmt(r.creadas):'—'}</td><td>${r.validada?(f?`<b style="color:var(--rojo)">${fmt(f)}</b>`:'0'):'—'}</td>
+      <td>${r.validada?pill(kPct(r.creadas,r.posibles)):pill(null)}</td><td>${r.validada?(fu?`<b style="color:#9A7A12">${fmt(fu)}</b>`:'0'):'—'}</td>
+      <td class="nw">${f||!r.validada?`<button class="btn-cov ghost kd-b" onclick="kpiStkFaltan(${i})">Ver faltantes</button>`:''}</td></tr>`;});
+  h+='</tbody></table></div>';
+  const notas=[];
+  if(rows.some(r=>!r.validada))notas.push('<b>Sin validar:</b> esas tiendas no tienen títulos cargados, así que no se sabe cuáles existen. Para medirlas, el equipo de eCommerce debe cargar su export con la columna de título.');
+  if(rows.some(r=>r.validada&&r.con_sku>r.creadas))notas.push('<b>Con el SKU fuera de matriz:</b> publicaciones de la tienda con este SKU cuyo título no coincide con la matriz; no cuentan como creadas.');
+  notas.push('<b>Posibles</b> = productos de la matriz de la empresa con este SKU completo (con precio), en el idioma del país.');
+  h+=`<div class="note kd-note">${notas.join('<br>')}</div><div id="kdStkTit"></div>`;
+  document.getElementById('kdBody').innerHTML=h;
+  document.getElementById('k6Det').querySelector('.modal-h h3').textContent='Stock vs publicaciones';
+  document.getElementById('k6Det').style.display='flex';
+}
+async function kpiStkFaltan(i){
+  const s=KSTK.sel,r=s&&s.rows[i];if(!r)return;
+  const box=document.getElementById('kdStkTit');box.innerHTML='<div class="small" style="margin-top:12px">Cargando títulos…</div>';
+  try{
+    const {data,error}=await SB.rpc('stock_faltantes',{p_pais:r.pais,p_empresa:r.empresa,p_canal:r.canal,p_sku:r.sku});
+    if(error)throw error;
+    const L=data||[];
+    KSTK.falt={r,L};
+    box.innerHTML=`<div class="sec-h" style="margin:16px 0 6px"><h2 style="font-size:18px">Faltan por crear · ${kEsc(r.canal)} · ${kEsc(r.empresa)}</h2>
+      <span class="hint">${fmt(L.length)} títulos de la matriz${r.validada?'':' (tienda sin validar: se listan todos)'}</span>
+      <button class="btn-cov ghost kd-b" onclick="kpiStkFaltanExcel()">⬇ Excel</button></div>
+      <div class="tbl-wrap" style="max-height:320px"><table class="kd-tbl"><thead><tr><th class="l">Título en la matriz</th><th class="l">SKU</th></tr></thead><tbody>
+      ${L.slice(0,300).map(x=>`<tr><td class="l wr">${kEsc(x.titulo)}</td><td class="l">${kEsc(x.sku||'')}</td></tr>`).join('')||'<tr><td colspan="2" class="empty">Todo creado.</td></tr>'}
+      ${L.length>300?`<tr><td colspan="2" class="empty">Se muestran 300 de ${fmt(L.length)}; el Excel trae todo.</td></tr>`:''}</tbody></table></div>`;
+  }catch(e){box.innerHTML=`<div class="note kd-note">No se pudo leer: ${kEsc(e.message||e)}</div>`;}
+}
+function kpiStkFaltanExcel(){
+  const f=KSTK.falt;if(!f)return;
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['País','Empresa','Canal','SKU','Título por crear']].concat(f.L.map(x=>[f.r.pais,f.r.empresa,f.r.canal,x.sku||f.r.sku,x.titulo]))),'Faltan por crear');
+  XLSX.writeFile(wb,`Faltantes_${f.r.pais}_${f.r.canal}_${f.r.empresa}_${f.r.sku}.xlsx`.replace(/\s+/g,'_'));
 }
 
 // ---- Lectura de Excel ----
