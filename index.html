@@ -547,6 +547,7 @@
             <label><input type="checkbox" class="covcanal" value="Mercado Libre">Mercado Libre</label>
             <label><input type="checkbox" class="covcanal" value="Amazon">Amazon</label>
             <label><input type="checkbox" class="covcanal" value="eBay">eBay</label>
+            <label><input type="checkbox" class="covcanal" value="Xstore Shop">Xstore Shop</label>
             <label><input type="checkbox" class="covcanal" value="Camozzi Shop">Camozzi Shop</label>
           </div>
         </div>
@@ -658,7 +659,7 @@
 
     <div class="note">
       <b>Cómo se calcula:</b><br>
-      • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b> (incluye Xstore) y <b>Camozzi Shop</b> (solo Venezuela y Colombia). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
+      • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b> (fuera de EE.UU. incluye a Xstore), <b>Xstore Shop</b> (solo Estados Unidos) y <b>Camozzi Shop</b> (solo Venezuela y Colombia). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
       • <b>Estado manual</b>: el equipo de eCommerce puede marcar un canal como <b>Activo</b> (existe aunque no tenga datos cargados), <b>Pendiente</b> o <b>Inactivo / no creado</b>; los dos últimos cuentan en el total pero no como activos.<br>
       • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de Operaciones › Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas.<br>
       • <b>Ventas y meta</b> en USD netos, por mes · país · empresa · canal.<br>
@@ -747,12 +748,16 @@ const FLAGS={"México":"🇲🇽","Colombia":"🇨🇴","Estados Unidos":"🇺�
 // Orden alfabético de países en todo el panel
 const ORD_PAIS=["Brasil","Colombia","España","Estados Unidos","México","Venezuela"];
 const ordValid=a=>a.sort((x,y)=>{const i=ORD_PAIS.indexOf(x.pais),j=ORD_PAIS.indexOf(y.pais);return (i<0?99:i)-(j<0?99:j)||String(x.empresa).localeCompare(String(y.empresa))||String(x.canal).localeCompare(String(y.canal))});
-const CANALES=["Masia Shop","Mercado Libre","Amazon","eBay","Camozzi Shop"];
+const CANALES=["Masia Shop","Xstore Shop","Mercado Libre","Amazon","eBay","Camozzi Shop"];
 // Tiendas propias: cuentan como UNA unidad por país (no por empresa).
-const TIENDAS_PROPIAS=["Masia Shop","Camozzi Shop"];
+const TIENDAS_PROPIAS=["Masia Shop","Xstore Shop","Camozzi Shop"];
 // Tiendas que solo existen en ciertos países
-const TIENDA_PAISES={"Camozzi Shop":["Venezuela","Colombia"]};
-// "Xstore Shop" no es un canal aparte: es la Masia Shop con la empresa Xstore.
+const TIENDA_PAISES={"Xstore Shop":["Estados Unidos"],"Camozzi Shop":["Venezuela","Colombia"]};
+// Tienda propia de Xstore: en Estados Unidos es la Xstore Shop; en los demás países es la Masia Shop con empresa Xstore.
+function kTienda(pais,empresa,canal){
+  if(empresa==='Xstore'&&(canal==='Masia Shop'||canal==='Xstore Shop'))return pais==='Estados Unidos'?'Xstore Shop':'Masia Shop';
+  return canal;
+}
 const esXstoreShop=v=>{const k=String(v==null?'':v).toLowerCase();return /xstore/.test(k)&&/shop|shopify|tienda|web/.test(k)};
 const EMPRESAS=["Masia Group","Masia Rentals","Masia Compressors","Xstore","Camozzi"];
 
@@ -1129,7 +1134,7 @@ function normCanal(v){const k=String(v==null?'':v).trim().toLowerCase();
   if(/mercado|meli/.test(k)||k==='ml')return 'Mercado Libre';
   if(/amazon|amz/.test(k))return 'Amazon';
   if(/ebay/.test(k))return 'eBay';
-  if(/xstore/.test(k)&&/shop|shopify|tienda|web/.test(k))return 'Masia Shop';   // Xstore Shop = Masia Shop · Xstore
+  if(/xstore/.test(k)&&/shop|shopify|tienda|web/.test(k))return 'Xstore Shop';   // fuera de EE.UU. kTienda() la pasa a Masia Shop · Xstore
   if(/camozzi/.test(k))return 'Camozzi Shop';
   if(/shop|shopify/.test(k))return 'Masia Shop';
   return String(v==null?'':v).trim();
@@ -1236,7 +1241,7 @@ function analizarPubFile(file){
         // ---- Consolidado: una fila por listing; agrupamos por país·empresa·canal ----
         const g={};
         rows.forEach(x=>{
-          const pais=normPais(x[cPais]), empresa=esXstoreShop(x[cCan])?'Xstore':normEmpresa(x[cEmp]), canal=normCanal(x[cCan]);
+          const pais=normPais(x[cPais]), empresa=esXstoreShop(x[cCan])?'Xstore':normEmpresa(x[cEmp]), canal=kTienda(pais,empresa,normCanal(x[cCan]));
           const k=pais+'|'+empresa+'|'+canal;
           (g[k]=g[k]||{pais,empresa,canal,rows:[]}).rows.push(x);
         });
@@ -1271,7 +1276,7 @@ function detectarPCE(name){
   if(/mercado ?libre|meli|mlib/.test(n)||tk('ml'))canal='Mercado Libre';
   else if(/amazon|amz/.test(n))canal='Amazon';
   else if(/ebay/.test(n))canal='eBay';
-  else if(/shopify|shop/.test(n))canal=camozzi?'Camozzi Shop':'Masia Shop';
+  else if(/shopify|shop/.test(n))canal=camozzi?'Camozzi Shop':(/xstore/.test(n)?'Xstore Shop':'Masia Shop');
   let empresa='';
   if(camozzi)empresa='Camozzi';
   else if(/rentals?/.test(n))empresa='Masia Rentals';
@@ -1324,6 +1329,7 @@ async function aplicarPublicaciones(){
   const filas=[],grupos=[];let skip=0;
   PEND.forEach(p=>{
     if(!p.pais||!p.canal||!p.empresa||p.error){skip++;return}
+    p.canal=kTienda(p.pais,p.empresa,p.canal);
     filas.push({pais:p.pais,empresa:p.empresa,canal:p.canal,sku_pb:p.skusUnicos,pub:p.filas,lineas:p.lineas||{}});
     grupos.push(p);
   });
@@ -2961,7 +2967,7 @@ async function kpiCargarVentas(e){
       rows.forEach(x=>{
         let anio=cA?Math.round(kNum(x[cA])):null,mes=cM?kMes(x[cM]):null;
         if(cF&&x[cF] instanceof Date){anio=anio||x[cF].getFullYear();mes=mes||x[cF].getMonth()+1;}
-        const pais=normPais(x[cP]),empresa=esXstoreShop(x[cC])?'Xstore':kEmpresa(x[cE]),canal=normCanal(x[cC]);
+        const pais=normPais(x[cP]),empresa=esXstoreShop(x[cC])?'Xstore':kEmpresa(x[cE]),canal=kTienda(pais,empresa,normCanal(x[cC]));
         if(!anio||!mes||!pais||!empresa||!canal){omitidas++;return}
         const k=[anio,mes,pais,empresa,canal].join('|');
         const o=acc[k]=acc[k]||{anio,mes,pais,empresa,canal,facturacion:0,objetivo:0};
@@ -3025,7 +3031,7 @@ async function kpiCargarMedios(e){
       const det=(cP&&cE&&cC)?null:detectarPCE(file.name);
       if(det&&!(det.pais&&det.empresa&&det.canal)){avisos.push(`${file.name}: sin columnas PAIS/EMPRESA/CANAL y no pude deducir la tienda por el nombre`);continue}
       rows.forEach(x=>{
-        const pais=det?det.pais:normPais(x[cP]),empresa=det?det.empresa:(esXstoreShop(x[cC])?'Xstore':kEmpresa(x[cE])),canal=det?det.canal:normCanal(x[cC]);
+        const pais=det?det.pais:normPais(x[cP]),empresa=det?det.empresa:(esXstoreShop(x[cC])?'Xstore':kEmpresa(x[cE])),canal=kTienda(pais,empresa,det?det.canal:normCanal(x[cC]));
         if(!pais||!empresa||!canal)return;
         const k=kKey(pais,empresa,canal);
         const o=acc[k]=acc[k]||{pais,empresa,canal,medidas:0,con_fotos:0,con_video:0,cumplen:0};
