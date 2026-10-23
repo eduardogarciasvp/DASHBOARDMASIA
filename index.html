@@ -563,6 +563,7 @@
       </div>
       <div class="tbl-wrap" style="margin-top:14px"><div id="covTabla"></div></div>
       <div class="note">
+        <b>Excepción:</b> la <b>Masia Shop · Xstore no lleva aceites</b> (familia de SKU KO/MO: KOA, KOPGRI, KOGWS, KOVP…; los aceites de la Masia Shop van por Masia Group), así que su deber ser es el de Xstore sin aceites. Xstore Shop y los marketplaces de Xstore sí llevan aceites.<br>
         <b>Cómo se llenan los números:</b> cada fila externa (Amazon / eBay / Mercado Libre) toma el <i>deber ser</i> de <b>su empresa</b> en la matriz — el mismo denominador en todos los canales externos de esa empresa.
         La <b>Masia Shop</b> agrégala como una fila por empresa: el total del país las suma (una sola tienda para todas las empresas).
         El lado <i>real</i> (lo efectivamente publicado) se carga con <b>📦 Cargar publicaciones</b>.
@@ -672,7 +673,7 @@
       <b>Cómo se calcula:</b><br>
       • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b> (fuera de EE.UU. incluye a Xstore), <b>Xstore Shop</b> (solo Estados Unidos) y <b>Camozzi Shop</b> (solo Venezuela y Colombia; Camozzi no vende por la Masia Shop). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
       • <b>Estado manual</b>: el equipo de eCommerce puede marcar un canal como <b>Activo</b> (existe aunque no tenga datos cargados), <b>Pendiente</b> o <b>Inactivo / no creado</b>; los dos últimos cuentan en el total pero no como activos.<br>
-      • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de Operaciones › Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas.<br>
+      • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de Operaciones › Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas. La <b>Masia Shop · Xstore no lleva aceites</b> (en la Masia Shop van por Masia Group); Xstore Shop y los marketplaces de Xstore sí.<br>
       • <b>Ventas y meta</b> en USD netos, por mes · país · empresa · canal.<br>
       • <b>Stock vs publicaciones</b>: para cada SKU con stock, <b>posibles</b> = productos de la matriz con ese SKU completo (con precio, en el idioma del país) en cada tienda del país; <b>creadas</b> = los que ya tienen su título publicado. Las tiendas sin títulos cargados salen como <b>sin validar</b> y no entran en el %.<br>
       • <b>Período</b>: ventas y metas suman los meses marcados en la línea de tiempo (por defecto, enero al mes en curso; la meta del mes en curso cuenta completa).<br>
@@ -1764,7 +1765,7 @@ function lineasCriticas(r,topN){
   const pr=PUBROWS.find(p=>p.pais===r.pais&&p.empresa===r.empresa&&p.canal===r.canal);
   const pl=(pr&&pr.lineas)||{};
   const sinDesglose=pr&&pr.pub>0&&!Object.keys(pl).length;
-  const items=Object.keys(ml).map(l=>({l,obj:ml[l].pub,hoy:(pl[l]&&pl[l].pub)||0}))
+  const items=Object.keys(ml).filter(l=>!(excluyeAceites(r.empresa,r.canal)&&esFamAceite(l))).map(l=>({l,obj:ml[l].pub,hoy:(pl[l]&&pl[l].pub)||0}))
     .map(x=>({...x,gap:x.obj-x.hoy})).filter(x=>x.gap>0)
     .sort((x,y)=>y.gap-x.gap).slice(0,topN||3);
   return {falta:sinDesglose?'pub':null,items};
@@ -2110,11 +2111,22 @@ function supaConfigurada(){
 }
 // DATA = unión de cobertura + publicaciones (cruzadas con la matriz).
 // Así lo real aparece aunque todavía no exista la fila de cobertura.
+// Aceites (familia de SKU K/M + O: KOA, KOPGRI, KOGWS, KOVP…, sin los separadores de agua KOWS).
+// La Masia Shop de Xstore NO lleva aceites (en la Masia Shop van por Masia Group); Xstore Shop y los
+// marketplaces de Xstore sí. Misma regla que es_aceite()/excluye_aceites() en Supabase.
+const esFamAceite=k=>/^O/.test(k)&&!/^OWS/.test(k)&&k!=='ORING';
+const excluyeAceites=(empresa,canal)=>empresa==='Xstore'&&canal==='Masia Shop';
+function aceitesDe(empresa){
+  const L=(MATRIZ_AGG[empresa]||{}).lineas||{};let pub=0,sku=0;
+  Object.keys(L).forEach(k=>{if(esFamAceite(k)){pub+=+L[k].pub||0;sku+=+L[k].sku||0;}});
+  return {pub,sku};
+}
 function rebuildDATA(){
   const key=o=>o.pais+'|'+o.empresa+'|'+o.canal;
   const pm={}; PUBROWS.forEach(p=>pm[key(p)]={skuPb:p.sku_pb||0,pub:p.pub||0});
   const fila=(pais,empresa,canal)=>{
-    const a=MATRIZ_AGG[empresa]||{pub:0,sku:0};
+    let a=MATRIZ_AGG[empresa]||{pub:0,sku:0};
+    if(excluyeAceites(empresa,canal)){const o=aceitesDe(empresa);a={...a,pub:Math.max(0,a.pub-o.pub),sku:Math.max(0,a.sku-o.sku)};}
     const r=pm[pais+'|'+empresa+'|'+canal]||{skuPb:0,pub:0};
     // Regla de cumplimiento: solo cuentan las publicaciones que CUMPLEN la política
     // (título válido contra la matriz). Las fuera de política salen del conteo y

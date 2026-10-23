@@ -94,6 +94,11 @@ Una fila por listing, con estas columnas (los nombres se detectan solos):
 - **Operaciones** (departamento de eCommerce): enlace `…/#operaciones`. Detalle, Resumen, Cobertura, Validación, Objetivos y **Datos del Dashboard** (cargas de ventas y metas, fotos y video, inventario, estado de canales, plantillas y Excel).
 - El panel abre en la última sección usada en ese navegador (por defecto, KPI). Ambas usan el mismo login y los mismos permisos.
 
+## Reglas de tiendas propias
+- **Xstore Shop** existe solo en Estados Unidos; fuera de EE.UU. la tienda propia de Xstore es **Masia Shop · Xstore**.
+- **Camozzi** vende siempre por **Camozzi Shop** (Colombia y Venezuela), nunca por Masia Shop.
+- **Masia Shop · Xstore no lleva aceites** (familia de SKU KO/MO); los aceites de la Masia Shop van por Masia Group. Xstore Shop y los marketplaces de Xstore sí llevan aceites. Regla en `aceites_masia_shop_xstore.sql` (Supabase) y en `index.html` (`excluyeAceites`).
+
 ## Semáforos
 - % meta: 0–49 rojo · 50–74 amarillo · 75+ verde
 - % publicaciones (también canales activos y 6 + 1): 0–69 rojo · 70–89 amarillo · 90+ verde

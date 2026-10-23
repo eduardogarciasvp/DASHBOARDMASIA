@@ -182,6 +182,7 @@ language sql stable set search_path = public as $$
     join matriz_titulos m on m.empresa = t.empresa and upper(btrim(m.sku)) = inv.sku
          and m.tiene_precio = 'SI'
          and (m.idioma is null or m.idioma = case when t.pais = 'Estados Unidos' then 'EN' else 'ES' end)
+    where not (excluye_aceites(t.empresa, t.canal) and es_aceite(inv.sku))   -- requiere aceites_masia_shop_xstore.sql
   ), agg as (
     select mz.pais, mz.empresa, mz.canal, mz.sku, max(mz.stock) as stock,
            count(distinct mz.fila) as posibles,
@@ -209,6 +210,7 @@ language sql stable set search_path = public as $$
   from matriz_titulos m
   where m.empresa = p_empresa and upper(btrim(m.sku)) = upper(btrim(p_sku)) and m.tiene_precio = 'SI'
     and (m.idioma is null or m.idioma = case when p_pais = 'Estados Unidos' then 'EN' else 'ES' end)
+    and not (excluye_aceites(p_empresa, p_canal) and es_aceite(m.sku))
     and not exists (select 1 from pub_titulos p
                     where p.pais = p_pais and p.empresa = p_empresa and p.canal = p_canal
                       and p.titulo_norm = m.titulo_norm)
