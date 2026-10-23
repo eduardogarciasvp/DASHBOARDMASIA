@@ -41,7 +41,7 @@
 
   .tabs{display:flex;gap:4px;margin-top:18px;border-bottom:2px solid var(--linea);overflow-x:auto;scrollbar-width:thin}
   .tab{font-family:'Barlow Condensed';font-weight:600;font-size:17px;background:none;border:none;
-    color:var(--gris);padding:10px 18px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
+    color:var(--gris);padding:10px 13px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s;white-space:nowrap}
   .tab.on{color:var(--azul);border-bottom-color:var(--ambar)}
   .tab:hover{color:var(--azul)}
 
@@ -341,6 +341,22 @@
   .secciones button.on b{color:#fff}
   body.sec-kpi .tabs, body.sec-kpi .ops-only{display:none!important}
   @media(max-width:520px){.secciones button{padding:10px 12px}.secciones button small{display:none}}
+  .msel{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:165px;max-width:240px;font-family:'Inter';font-size:13px;
+    border:1px solid var(--linea);border-radius:8px;padding:8px 10px;background:#fff;cursor:pointer;color:var(--tinta);text-align:left}
+  .msel span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msel i{font-style:normal;font-size:10px;color:var(--gris)}
+  .msel:hover{border-color:var(--azul-2)}
+  .msel.act{border-color:var(--azul);background:#EAF0FA;color:var(--azul);font-weight:600}
+  .fpanel-list label.msel-all{border-bottom:1px solid var(--linea);border-radius:6px 6px 0 0;font-weight:600}
+  .carga-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .carga{background:var(--blanco);border:1px solid var(--linea);border-radius:12px;padding:15px 16px;display:flex;flex-direction:column;gap:10px}
+  .cg-h{display:flex;gap:11px;align-items:flex-start}
+  .cg-h b{font-family:'Barlow Condensed';font-size:19px;color:var(--azul-tinta)}
+  .cg-i{font-size:20px;line-height:1.2;width:28px;text-align:center}
+  .cg-s{font-size:12.5px;color:var(--tinta);background:var(--papel);border:1px solid var(--linea);border-radius:9px;padding:9px 11px;line-height:1.55;flex:1}
+  .cg-b{display:flex;gap:8px;flex-wrap:wrap}
+  .rep-kpis.k3{grid-template-columns:repeat(3,1fr)}
+
   .kd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:4px}
   .kd-t{font-family:'Barlow Condensed';font-weight:700;font-size:21px;color:var(--azul-tinta)}
   .kd-s{font-size:12.5px;color:var(--gris);margin-top:2px}
@@ -438,7 +454,7 @@
 
 <div class="wrap">
   <nav class="secciones" aria-label="Secciones">
-    <button id="secKpi" onclick="setSeccion('kpi')"><span class="si">📊</span><span><b>KPI</b><small>Gerencia</small></span></button>
+    <button id="secKpi" onclick="setSeccion('kpi')"><span class="si">📊</span><span><b>Dashboard</b></span></button>
     <button id="secOps" onclick="setSeccion('ops')"><span class="si">🛠</span><span><b>Operaciones</b><small>Departamento de eCommerce</small></span></button>
   </nav>
   <div class="tabs">
@@ -447,6 +463,7 @@
     <button class="tab" id="tab3" onclick="setPage(3)">Cobertura · País×Canal</button>
     <button class="tab" id="tab4" onclick="setPage(4)">Validación · Títulos</button>
     <button class="tab" id="tab5" onclick="setPage(5)">Objetivos · Semana</button>
+    <button class="tab" id="tab7" onclick="setPage(7)">Datos del Dashboard</button>
   </div>
 
   <!-- ===================== PÁGINA 1 ===================== -->
@@ -477,7 +494,7 @@
       <b>Flujo de datos:</b> la <b>matriz</b> (semanal) llena el <i>deber ser</i> — SKUs Matriz y Pub. Matriz. Los <b>exports de publicaciones</b> (MercadoLibre, Amazon, eBay, Shopify por país) llenan lo <i>real</i> — SKUs publicados (distintos) y Publicaciones (listings). El panel cruza ambos por País · Canal · Empresa.<br>
       • % SKU = SKUs publicados ÷ SKUs Matriz · % Pub. = Publicaciones ÷ Pub. Matriz.<br>
       • En el total los SKUs NO se suman: se cuentan productos únicos (catálogo más amplio por empresa-país). Las publicaciones sí se suman.<br>
-      • Semáforo: <b style="color:var(--verde)">90–100% verde</b> · <b style="color:#9A7A12">75–90% amarillo</b> · <b style="color:var(--rojo)">0–75% rojo</b> · <b style="color:var(--neutro)">— sin matriz cargada</b>
+      • Semáforo <b>% SKU</b>: <b style="color:var(--rojo)">0–69% rojo</b> · <b style="color:#9A7A12">70–99% amarillo</b> · <b style="color:var(--verde)">100%+ verde</b>. Semáforo <b>% Pub.</b>: <b style="color:var(--rojo)">0–69% rojo</b> · <b style="color:#9A7A12">70–89% amarillo</b> · <b style="color:var(--verde)">90%+ verde</b> · <b style="color:var(--neutro)">— sin matriz cargada</b>
     </div>
   </div>
 
@@ -597,30 +614,24 @@
   <div class="page" id="page6">
     <div class="sec" style="margin-top:18px">
       <div class="sec-h">
-        <h2>KPIs por canal</h2>
-        <span class="hint">Canales activos, ventas contra meta y política <b>6 fotos + 1 video</b>. Se lee de tablas ya resumidas para que el panel cargue rápido.</span>
+        <h2>Indicadores principales</h2>
+        <span class="hint">Catálogo publicado, ventas contra meta y política <b>6 fotos + 1 video</b>. Los filtros admiten varias opciones a la vez.</span>
       </div>
       <div class="covform k6-filt">
-        <div class="covpg"><label>País</label><select id="k6Pais" onchange="kpiRender()"></select></div>
-        <div class="covpg"><label>Empresa</label><select id="k6Emp" onchange="kpiRender()"></select></div>
-        <div class="covpg"><label>Canal</label><select id="k6Can" onchange="kpiRender()"></select></div>
+        <div class="covpg"><label>País</label><button type="button" class="msel" id="k6F_pais" onclick="kMselAbrir('pais',this,event)"><span>Todos</span><i>▾</i></button></div>
+        <div class="covpg"><label>Empresa</label><button type="button" class="msel" id="k6F_empresa" onclick="kMselAbrir('empresa',this,event)"><span>Todas</span><i>▾</i></button></div>
+        <div class="covpg"><label>Canal</label><button type="button" class="msel" id="k6F_canal" onclick="kMselAbrir('canal',this,event)"><span>Todos</span><i>▾</i></button></div>
         <div class="covpg"><label>Año</label><select id="k6Anio" onchange="kpiCambioAnio()"></select></div>
+        <button class="chip-clear" id="k6Limpiar" style="display:none;align-self:center" onclick="kMselLimpiar()">Quitar filtros</button>
         <div class="k6-act">
-          <button class="btn-cov solo-admin" onclick="kpiModalCanal()">＋ Agregar canal</button>
-          <button class="btn-cov solo-admin" onclick="document.getElementById('fileVentas').click()">💵 Cargar ventas y metas</button>
-          <button class="btn-cov" onclick="document.getElementById('fileMedios').click()">📷 Cargar fotos y video</button>
-          <button class="btn-cov ghost" onclick="kpiPlantillas()">⬇ Plantillas</button>
-          <button class="btn-cov ghost" onclick="kpiExcel()">⬇ Excel</button>
-          <button class="btn-cov ghost" onclick="kpiAbrir(true)" title="Volver a leer los datos">↻</button>
+          <button class="btn-cov" onclick="kpiReportePDF()">📄 Reporte PDF</button>
         </div>
         <div class="k6-tlw">
           <div class="k6-tlh"><label>Período</label><span id="k6TlTx" class="k6-tltx"></span>
-            <span class="k6-pres"><button onclick="kpiPreset('ytd')">Acumulado</button><button onclick="kpiPreset('trim')">Último trimestre</button><button onclick="kpiPreset('mes')">Mes actual</button><button onclick="kpiPreset('anio')">Año completo</button></span></div>
+            <span class="k6-pres"><button onclick="kpiPreset('ytd')">Año hasta la fecha</button><button onclick="kpiPreset('trim')">Último trimestre</button><button onclick="kpiPreset('mes')">Mes actual</button><button onclick="kpiPreset('anio')">Año completo</button></span></div>
           <div class="k6-tl" id="k6Tl"></div>
           <div class="small" style="margin-top:4px">Clic = un mes · arrastra (o Shift+clic) = rango · Ctrl+clic = sumar o quitar meses sueltos. Pasa el mouse sobre un mes para ver ventas y meta.</div>
         </div>
-        <input id="fileVentas" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="kpiCargarVentas(event)">
-        <input id="fileMedios" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="kpiCargarMedios(event)">
       </div>
       <div id="k6Status" class="covstat warn" style="display:none"></div>
       <div class="kpis k6" id="k6Kpis"></div>
@@ -637,24 +648,35 @@
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Detalle por tienda</h2><span class="hint">Clic en un encabezado para ordenar (mayor a menor, menor a mayor, sin orden) · ▾ para filtrar como en Excel. El ⬇ Excel descarga lo que ves.</span></div>
+      <div class="sec-h"><h2>Detalle por tienda</h2><span class="hint">Clic en un encabezado para ordenar (mayor a menor, menor a mayor, sin orden) · ▾ para filtrar como en Excel. El Reporte PDF respeta este orden y filtros.</span></div>
       <div class="tbl-wrap"><div id="k6Tabla"></div></div>
     </div>
 
     <div class="sec">
-      <div class="sec-h"><h2>Stock y publicaciones posibles</h2></div>
-      <div class="stock-ph"><b>Fase 2 · conexión con el ERP.</b> Aquí irán los productos en stock por país, y las publicaciones reales se compararán también contra las posibles <b>con stock</b> (no solo contra la matriz).</div>
+      <div class="sec-h"><h2>Inventario por país</h2><span class="hint">Carga manual mientras se conecta el ERP. Respeta los filtros de país y empresa. Próximo paso: comparar las publicaciones reales contra las posibles <b>con stock</b>.</span></div>
+      <div id="k6Inv"></div>
     </div>
 
     <div class="note">
       <b>Cómo se calcula:</b><br>
       • <b>Canales activos</b> se miden por combinación <b>canal · empresa</b> en Amazon, eBay y Mercado Libre (ej. Amazon · Masia Rentals). Las tiendas propias cuentan como una por país: <b>Masia Shop</b>, <b>Xstore Shop</b> (solo Estados Unidos) y <b>Camozzi Shop</b> (solo Venezuela y Colombia). Activo = tiene publicaciones cargadas; el universo sale de la pestaña Cobertura.<br>
-      • <b>Estado manual</b> (＋ Agregar canal, o clic en una etiqueta): <b>Activo</b> cuenta como activo aunque no tenga datos cargados; <b>Pendiente</b> e <b>Inactivo / no creado</b> cuentan en el total pero no como activos.<br>
-      • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de la pestaña Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas.<br>
-      • <b>Ventas y meta</b> en USD netos, del Excel de ventas (AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO). Puede traer una sola hoja con ambas columnas, o hojas VENTAS y METAS separadas. Cargar un archivo <b>reemplaza los años que contiene</b>.<br>
+      • <b>Estado manual</b>: el equipo de eCommerce puede marcar un canal como <b>Activo</b> (existe aunque no tenga datos cargados), <b>Pendiente</b> o <b>Inactivo / no creado</b>; los dos últimos cuentan en el total pero no como activos.<br>
+      • <b>Publicaciones reales vs posibles</b>: reales = publicaciones que cumplen la matriz (las mismas de Operaciones › Detalle); posibles = publicaciones de la matriz de esa empresa. En las tiendas propias se suman todas las empresas.<br>
+      • <b>Ventas y meta</b> en USD netos, por mes · país · empresa · canal.<br>
       • <b>Período</b>: ventas y metas suman los meses marcados en la línea de tiempo (por defecto, enero al mes en curso; la meta del mes en curso cuenta completa).<br>
-      • <b>Política 6 + 1</b> = publicaciones con <b>6 fotos o más</b> y <b>al menos 1 video</b>, sobre las publicaciones revisadas en el archivo de fotos y video (PAIS · EMPRESA · CANAL · SKU · FOTOS · VIDEO). Cargar un archivo reemplaza solo las tiendas que contiene.<br>
-      • Semáforo: <b style="color:var(--verde)">90–100%</b> · <b style="color:#9A7A12">75–90%</b> · <b style="color:var(--rojo)">0–75%</b>
+      • <b>Política 6 + 1</b> = publicaciones con <b>6 fotos o más</b> y <b>al menos 1 video</b>, sobre las publicaciones revisadas.<br>
+      • Semáforo <b>% meta</b>: <b style="color:var(--rojo)">0–49%</b> · <b style="color:#9A7A12">50–74%</b> · <b style="color:var(--verde)">75%+</b>. Semáforo <b>publicaciones</b> (también canales activos y 6 + 1): <b style="color:var(--rojo)">0–69%</b> · <b style="color:#9A7A12">70–89%</b> · <b style="color:var(--verde)">90%+</b>. Semáforo <b>SKU</b>: <b style="color:var(--rojo)">0–69%</b> · <b style="color:#9A7A12">70–99%</b> · <b style="color:var(--verde)">100%+</b>.
+    </div>
+  </div>
+
+  <!-- ===================== PÁGINA 7 · OPERACIONES › DATOS DEL DASHBOARD ===================== -->
+  <div class="page" id="page7">
+    <div class="sec" style="margin-top:18px">
+      <div class="sec-h"><h2>Datos del Dashboard</h2><span class="hint">Lo que se carga aquí alimenta la sección <b>Dashboard</b> que ve la gerencia. Cada tarjeta muestra qué hay cargado hoy.</span></div>
+      <div class="carga-grid" id="k7Cargas"></div>
+      <input id="fileVentas" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="kpiCargarVentas(event)">
+      <input id="fileMedios" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="kpiCargarMedios(event)">
+      <input id="fileInv" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="kpiCargarInventario(event)">
     </div>
   </div>
 
@@ -785,13 +807,18 @@ const skuMz=r=>r.smA;
 const pubMz=r=>r.pmA;
 const pctSKU=r=>{const d=skuMz(r);return d?Math.round(r.skuPb/d*100):null};
 const pctPUB=r=>{const d=pubMz(r);return d?Math.round(r.pub/d*100):null};
-const cls=p=>p>=90?'g':p>=75?'y':'r';
-const col=p=>p>=90?'var(--verde)':p>=75?'var(--amar)':'var(--rojo)';
-const tint=p=>p>=90?'var(--verde-bg)':p>=75?'var(--amar-bg)':'var(--rojo-bg)';
+// Semáforos [umbral amarillo, umbral verde]:
+//  meta (ventas vs meta): 0–49 rojo · 50–74 amarillo · 75+ verde
+//  pub  (publicaciones):  0–69 rojo · 70–89 amarillo · 90+ verde
+//  sku  (SKUs):           0–69 rojo · 70–99 amarillo · 100+ verde
+const SEM={meta:[50,75],pub:[70,90],sku:[70,100]};
+const cls=(p,t)=>{const [a,b]=SEM[t]||SEM.pub;return p>=b?'g':p>=a?'y':'r'};
+const col=(p,t)=>({g:'var(--verde)',y:'var(--amar)',r:'var(--rojo)'})[cls(p,t)];
+const tint=(p,t)=>({g:'var(--verde-bg)',y:'var(--amar-bg)',r:'var(--rojo-bg)'})[cls(p,t)];
 const fmt=n=>n.toLocaleString('es');
-function pill(p){return p==null?`<span class="pillpct n">—</span>`:`<span class="pillpct ${cls(p)}">${p}%</span>`}
-function matCell(p){return p==null?`<span class="cell-val" style="background:var(--neutro-bg);color:var(--neutro)">—</span>`
-  :`<span class="cell-val" style="background:${tint(p)};color:${col(p)}">${p}%</span>`}
+function pill(p,t){return p==null?`<span class="pillpct n">—</span>`:`<span class="pillpct ${cls(p,t)}">${p}%</span>`}
+function matCell(p,t){return p==null?`<span class="cell-val" style="background:var(--neutro-bg);color:var(--neutro)">—</span>`
+  :`<span class="cell-val" style="background:${tint(p,t)};color:${col(p,t)}">${p}%</span>`}
 
 const COLS=[
   {key:'pais',lab:'País',tipo:'cat',align:'l'},
@@ -842,7 +869,7 @@ function totales(rows){
 function renderKPIs(){
   const rows=filas();
   const t=totales(rows);
-  const sc=t.pSKU==null?'is-n':'is-'+cls(t.pSKU), pc=t.pPUB==null?'is-n':'is-'+cls(t.pPUB);
+  const sc=t.pSKU==null?'is-n':'is-'+cls(t.pSKU,'sku'), pc=t.pPUB==null?'is-n':'is-'+cls(t.pPUB);
   const hayVal=rows.some(r=>fueraPol(r)!=null);
   const tf=rows.reduce((s,r)=>s+(fueraPol(r)||0),0);
   const tv=rows.reduce((s,r)=>s+(pubValidadas(r)||0),0);
@@ -926,7 +953,7 @@ function renderTabla(){
       <td class="l">${r.empresa}</td>
       <td>${fmt(r.skuPb)}</td>
       <td class="dim">${fmt(skuMz(r))}</td>
-      <td>${pill(pctSKU(r))}</td>
+      <td>${pill(pctSKU(r),'sku')}</td>
       <td>${fmt(r.pub)}</td>
       <td class="dim">${fmt(pubMz(r))}</td>
       <td>${pill(pctPUB(r))}</td>
@@ -939,7 +966,7 @@ function renderTabla(){
   const hayVal=rows.some(r=>fueraPol(r)!=null);
   h+=`<tr class="totrow">
     <td class="l" colspan="3">TOTAL (${rows.length} plataformas)</td>
-    <td>${fmt(t.skuU)}</td><td>${fmt(t.skuMzU)}</td><td>${pill(t.pSKU)}</td>
+    <td>${fmt(t.skuU)}</td><td>${fmt(t.skuMzU)}</td><td>${pill(t.pSKU,'sku')}</td>
     <td>${fmt(t.pub)}</td><td>${fmt(t.pubM)}</td><td>${pill(t.pPUB)}</td>
     <td>${hayVal?`<b style="color:var(--rojo)">${fmt(tf)}</b>`:'—'}</td></tr>`;
   document.getElementById('tbody').innerHTML=h;
@@ -1011,11 +1038,11 @@ function renderMatriz(){
         const r=getFila(p,canal,c.emp);
         if(!r){h+=`<td class="na" title="No opera en ${p}">—</td>`;return}
         const v=valCeldaM(r);
-        if(esPct()){h+=`<td>${matCell(v)}</td>`;
+        if(esPct()){h+=`<td>${matCell(v,METRICA==='pctSKU'?'sku':'pub')}</td>`;
           if(METRICA==='pctSKU'){rn+=r.skuPb;rd+=skuMz(r)}else{rn+=r.pub;rd+=pubMz(r)}}
         else{h+=`<td>${fmt(v)}</td>`;rs+=v}
       });
-      if(esPct()){const rp=rd?Math.round(rn/rd*100):null;h+=`<td class="rowtot">${matCell(rp)}</td>`}
+      if(esPct()){const rp=rd?Math.round(rn/rd*100):null;h+=`<td class="rowtot">${matCell(rp,METRICA==='pctSKU'?'sku':'pub')}</td>`}
       else h+=`<td class="rowtot">${fmt(rs)}</td>`;
       h+='</tr>';
     });
@@ -1026,11 +1053,11 @@ function renderMatriz(){
     const rs=DATA.filter(r=>r.pais===p);
     if(!rs.length){h+='<td class="na">—</td>';return}
     if(esPct()){let n=0,d=0;rs.forEach(r=>{if(METRICA==='pctSKU'){n+=r.skuPb;d+=skuMz(r)}else{n+=r.pub;d+=pubMz(r)}});
-      const pv=d?Math.round(n/d*100):null;h+=`<td>${matCell(pv)}</td>`}
+      const pv=d?Math.round(n/d*100):null;h+=`<td>${matCell(pv,METRICA==='pctSKU'?'sku':'pub')}</td>`}
     else{let s=0;rs.forEach(r=>s+=valCeldaM(r));gs+=s;h+=`<td>${fmt(s)}</td>`}
   });
   if(esPct()){let n=0,d=0;DATA.forEach(r=>{if(METRICA==='pctSKU'){n+=r.skuPb;d+=skuMz(r)}else{n+=r.pub;d+=pubMz(r)}});
-    const gp=d?Math.round(n/d*100):null;h+=`<td class="rowtot">${matCell(gp)}</td>`}
+    const gp=d?Math.round(n/d*100):null;h+=`<td class="rowtot">${matCell(gp,METRICA==='pctSKU'?'sku':'pub')}</td>`}
   else h+=`<td class="rowtot">${fmt(gs)}</td>`;
   h+='</tr></tbody>';
   document.getElementById('mat').innerHTML=h;
@@ -1038,7 +1065,7 @@ function renderMatriz(){
 
 // ===== Render maestro =====
 function render(){renderKPIs();renderChips();renderPaises();renderHead();renderTabla();renderMatriz();renderCobertura();
-  if(PAGE===6&&typeof KPI!=='undefined'&&KPI.cargado){kpiFiltros();kpiRender();}}
+  if((PAGE===6||PAGE===7)&&typeof KPI!=='undefined'&&KPI.cargado){kpiFiltros();kpiRender();}}
 function upd(idx,campo,el){
   const v=parseInt(el.textContent.replace(/[^\d]/g,''))||0;
   DATA[idx][campo]=v;clearTimeout(window._t);window._t=setTimeout(render,700);
@@ -1046,13 +1073,13 @@ function upd(idx,campo,el){
 function setMetrica(m){METRICA=m;
   document.querySelectorAll('#matsel button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));renderMatriz()}
 // ===== Secciones: KPI (gerencia) · Operaciones (departamento de eCommerce) =====
-// Cada sección tiene su enlace: …/#kpi y …/#operaciones
+// Cada sección tiene su enlace: …/#dashboard (también …/#kpi) y …/#operaciones
 var SECCION='kpi', SECCION_OPS_PAGE=1;
-const SECC_TXT={kpi:{h:'Indicadores <b>e-Commerce</b>',t:'KPI · E-commerce Masia Group'},
+const SECC_TXT={kpi:{h:'Dashboard <b>e-Commerce</b>',t:'Dashboard · E-commerce Masia Group'},
                 ops:{h:'Cumplimiento de <b>Publicaciones</b>',t:'Operaciones · Cumplimiento de Publicaciones · E-commerce Masia Group'}};
 function seccionInicial(){
   const h=(location.hash||'').replace('#','').toLowerCase();
-  if(h==='kpi')return 'kpi';
+  if(h==='kpi'||h==='dashboard')return 'kpi';
   if(h.startsWith('oper')||h==='ops')return 'ops';
   try{const g=localStorage.getItem('masia_seccion');if(g==='kpi'||g==='ops')return g;}catch(e){}
   return 'kpi';
@@ -1066,19 +1093,20 @@ function setSeccion(sec,sinHash){
   document.getElementById('hTitulo').innerHTML=SECC_TXT[SECCION].h;
   document.title=SECC_TXT[SECCION].t;
   try{localStorage.setItem('masia_seccion',SECCION);}catch(e){}
-  if(!sinHash){const nh=SECCION==='kpi'?'#kpi':'#operaciones';if(location.hash!==nh)history.replaceState(null,'',nh);}
+  if(!sinHash){const nh=SECCION==='kpi'?'#dashboard':'#operaciones';if(location.hash!==nh)history.replaceState(null,'',nh);}
   setPage(SECCION==='kpi'?6:SECCION_OPS_PAGE);
 }
 window.addEventListener('hashchange',()=>{const s=seccionInicial();if(s!==SECCION)setSeccion(s,true);});
 function setPage(n){PAGE=n;
   if(n!==6)SECCION_OPS_PAGE=n;
-  for(let i=1;i<=6;i++){
+  for(let i=1;i<=7;i++){
     document.getElementById('page'+i).classList.toggle('on',n===i);
     const t=document.getElementById('tab'+i);if(t)t.classList.toggle('on',n===i);
   }
   if(n===4&&SB){if(VALID_CACHE)pintarValidacion();else cargarValidacion();}
   if(n===5&&SB)renderObjetivos();
   if(n===6&&SB)kpiAbrir();
+  if(n===7&&SB){kpiPintarCargas();kpiAbrir();}
 }
 
 // ===== Carga de PUBLICACIONES (real) =====
@@ -1647,25 +1675,25 @@ function accionesPais(p){
     .sort((a,b)=>b.faltSKU-a.faltSKU)
     .forEach(o=>{
       if(o.pS==null)return;
-      if(o.pS<75)acc.push({cls:'r',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: prioridad alta. Publicar ${fmt(o.faltSKU)} SKUs y ${fmt(o.faltPUB)} publicaciones (hoy ${o.pS}% SKU / ${o.pP==null?'—':o.pP+'%'} pub).`});
-      else if(o.pS<90)acc.push({cls:'y',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: cerrar brecha de ${fmt(o.faltSKU)} SKUs para llegar a verde (hoy ${o.pS}%).`});
+      if(o.pS<SEM.sku[0])acc.push({cls:'r',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: prioridad alta. Publicar ${fmt(o.faltSKU)} SKUs y ${fmt(o.faltPUB)} publicaciones (hoy ${o.pS}% SKU / ${o.pP==null?'—':o.pP+'%'} pub).`});
+      else if(o.pS<SEM.sku[1])acc.push({cls:'y',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: cerrar brecha de ${fmt(o.faltSKU)} SKUs para llegar a verde (hoy ${o.pS}%).`});
       else fort.push({cls:'g',txt:`<b>${o.r.empresa} · ${o.r.canal}</b>: al día, ${o.pS}% SKU / ${o.pP==null?'—':o.pP+'%'} pub.`});
     });
   return {acc:acc.slice(0,6),fort:fort.slice(0,3)};
 }
 function repK(lab,val,clase){return `<div class="rep-k ${clase}"><div class="l">${lab}</div><div class="v">${val}</div></div>`}
-function pp(p){return p==null?'<span class="rep-pill" style="background:var(--neutro-bg);color:var(--neutro)">—</span>'
-  :`<span class="rep-pill" style="background:${tint(p)};color:${col(p)}">${p}%</span>`}
+function pp(p,t){return p==null?'<span class="rep-pill" style="background:var(--neutro-bg);color:var(--neutro)">—</span>'
+  :`<span class="rep-pill" style="background:${tint(p,t)};color:${col(p,t)}">${p}%</span>`}
 function repTabla(rs){
   let h='<table class="rep"><thead><tr><th class="l">Canal</th><th class="l">Empresa</th><th>SKU Pub</th><th>SKU Mz</th><th>%SKU</th><th>Pub</th><th>Pub Mz</th><th>%Pub</th></tr></thead><tbody>';
   rs.slice().sort((a,b)=>a.empresa.localeCompare(b.empresa)||a.canal.localeCompare(b.canal)).forEach(r=>{
     h+=`<tr><td class="l">${r.canal}</td><td class="l">${r.empresa}</td>
-      <td>${fmt(r.skuPb)}</td><td>${fmt(skuMz(r))}</td><td>${pp(pctSKU(r))}</td>
+      <td>${fmt(r.skuPb)}</td><td>${fmt(skuMz(r))}</td><td>${pp(pctSKU(r),'sku')}</td>
       <td>${fmt(r.pub)}</td><td>${fmt(pubMz(r))}</td><td>${pp(pctPUB(r))}</td></tr>`;
   });
   return h+'</tbody></table>';
 }
-function clsN(p){return p==null?'n':cls(p)}
+function clsN(p,t){return p==null?'n':cls(p,t)}
 // ===== Reporte ejecutivo: objetivos fechados (revisiones de los miércoles) =====
 function proxMier(n){const d=new Date();let add=(3-d.getDay()+7)%7;if(add===0)add=7;
   const f=new Date(d);f.setDate(d.getDate()+add+7*((n||1)-1));return f;}
@@ -1728,7 +1756,7 @@ function buildReporte(){
       <div class="rt"><small>Masia Group · E-commerce</small>Resumen general de cumplimiento</div>
       <div class="rd">${hoy}<br>Próx. revisión: ${fFec(w1)}</div></div>`;
   H+=`<div class="rep-kpis">
-      ${repK('Cumpl. SKU',tg.pSKU==null?'—':tg.pSKU+'%',clsN(tg.pSKU))}
+      ${repK('Cumpl. SKU',tg.pSKU==null?'—':tg.pSKU+'%',clsN(tg.pSKU,'sku'))}
       ${repK('Cumpl. Pub.',tg.pPUB==null?'—':tg.pPUB+'%',clsN(tg.pPUB))}
       ${repK('SKUs únicos',fmt(tg.skuU),'b')}
       ${repK('Publicaciones',fmt(tg.pub),'b')}
@@ -1738,10 +1766,10 @@ function buildReporte(){
   ORD_PAIS.filter(p=>all.some(r=>r.pais===p)).map(p=>({p,t:totales(all.filter(r=>r.pais===p)),n:all.filter(r=>r.pais===p).length}))
     .sort((a,b)=>(b.t.pSKU||0)-(a.t.pSKU||0)).forEach(o=>{
     H+=`<tr><td class="l">${FLAGS[o.p]||''} ${o.p}</td>
-      <td>${fmt(o.t.skuU)}</td><td>${fmt(o.t.skuMzU)}</td><td>${pp(o.t.pSKU)}</td>
+      <td>${fmt(o.t.skuU)}</td><td>${fmt(o.t.skuMzU)}</td><td>${pp(o.t.pSKU,'sku')}</td>
       <td>${fmt(o.t.pub)}</td><td>${fmt(o.t.pubM)}</td><td>${pp(o.t.pPUB)}</td><td>${o.n}</td></tr>`;});
   H+=`<tr style="font-weight:700;border-top:2px solid var(--azul)"><td class="l">TOTAL RED</td>
-      <td>${fmt(tg.skuU)}</td><td>${fmt(tg.skuMzU)}</td><td>${pp(tg.pSKU)}</td>
+      <td>${fmt(tg.skuU)}</td><td>${fmt(tg.skuMzU)}</td><td>${pp(tg.pSKU,'sku')}</td>
       <td>${fmt(tg.pub)}</td><td>${fmt(tg.pubM)}</td><td>${pp(tg.pPUB)}</td><td>${all.length}</td></tr></tbody></table>`;
   // Página 1: sin objetivos de tiendas — solo objetivos personalizados de ámbito General
   const objGen=CUSTOM_OBJS.filter(o=>!o.pais);
@@ -1758,7 +1786,7 @@ function buildReporte(){
         <div class="rt"><small>Masia Group · E-commerce</small>${FLAGS[p]||''} ${p}</div>
         <div class="rd">${hoy}<br>Próx. revisión: ${fFec(w1)}</div></div>`;
     H+=`<div class="rep-kpis">
-        ${repK('Cumpl. SKU',t.pSKU==null?'—':t.pSKU+'%',clsN(t.pSKU))}
+        ${repK('Cumpl. SKU',t.pSKU==null?'—':t.pSKU+'%',clsN(t.pSKU,'sku'))}
         ${repK('Cumpl. Pub.',t.pPUB==null?'—':t.pPUB+'%',clsN(t.pPUB))}
         ${repK('SKUs únicos',fmt(t.skuU)+'/'+fmt(t.skuMzU),'b')}
         ${repK('Publicaciones',fmt(t.pub)+'/'+fmt(t.pubM),'b')}
@@ -1774,7 +1802,7 @@ function buildReporte(){
     CUSTOM_OBJS.filter(o=>o.pais===p).forEach(o=>H+=`<li class="b"><b>Objetivo adicional:</b> ${o.texto}</li>`);
     H+='</ul>';
     // Fortalezas
-    const fort=rs.filter(r=>pctPUB(r)!=null&&pctPUB(r)>=90);
+    const fort=rs.filter(r=>pctPUB(r)!=null&&pctPUB(r)>=SEM.pub[1]);
     if(fort.length){H+='<div class="rep-sub">Fortalezas a sostener</div><ul class="acc">';
       fort.forEach(r=>H+=`<li class="g"><b>${r.empresa} · ${r.canal}</b> — ${pctPUB(r)}% de cumplimiento (${fmt(r.pub)}/${fmt(pubMz(r))}). Mantener y vigilar bajas.</li>`);H+='</ul>';}
     H+=`<div class="rep-foot"><span>Masia Group · ${p}</span><span>Confidencial · uso interno</span></div></div>`;
@@ -2170,7 +2198,7 @@ async function entrarApp(){
   gatearUI();
   if(ME.paises&&ME.paises.length)FILT.pais=new Set(ME.paises); // filtro por defecto, no candado
   await cargarTodo();   // el panel se pinta YA con la última validación guardada…
-  if(PAGE===6)kpiAbrir();
+  if(PAGE===6||PAGE===7)kpiAbrir();
   // …y en segundo plano se regenera la validación completa; al terminar, el panel se refresca solo.
   regenerarValidacion(null,{objetivos:true}).catch(()=>{});
 }
@@ -2190,7 +2218,7 @@ async function doLogout(){try{await SB.auth.signOut()}catch(e){}location.reload(
 // ===== Pestaña 6 · KPIs por canal (ventas, meta, activos, 6+1) =====
 // Se carga SOLO al abrir la pestaña (no frena la carga inicial del panel).
 // ===================================================================
-var KPI={cargado:false,cargando:false,ventas:[],medios:[],canales:[],faltaSQL:false,faltaCanales:false};
+var KPI={cargado:false,cargando:false,ventas:[],medios:[],canales:[],inv:[],faltaSQL:false,faltaCanales:false,faltaInv:false};
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const kEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const kUSD=n=>'$ '+Math.round(n||0).toLocaleString('de-DE');
@@ -2233,24 +2261,63 @@ async function kpiAbrir(force){
   // Estados manuales de canales (tabla opcional: si no existe, el resto sigue funcionando)
   try{KPI.canales=await kpiSelTodo('kpi_canales');KPI.faltaCanales=false;}
   catch(e){KPI.canales=[];KPI.faltaCanales=true;}
-  kpiFiltros();kpiRender();
+  try{KPI.inv=await kpiSelTodo('kpi_inventario_resumen');KPI.faltaInv=false;}
+  catch(e){KPI.inv=[];KPI.faltaInv=true;}
+  kpiFiltros();kpiRender();kpiPintarCargas();
 }
 
-// ---- Filtros (país · empresa · canal · año) y línea de tiempo de meses ----
+// ---- Filtros de selección múltiple (país · empresa · canal) + año ----
+// Conjunto vacío = todos. Se pueden combinar, p. ej. Estados Unidos + México o Masia Group + Xstore.
+var KF={pais:new Set(),empresa:new Set(),canal:new Set()};
+var KF_OPC={pais:[],empresa:[],canal:[]};
+const KF_LAB={pais:['Todos','País'],empresa:['Todas','Empresa'],canal:['Todos','Canal']};
+const kOk=(k,v)=>!KF[k].size||KF[k].has(v);
+function kMselNom(k,v){return k==='pais'?`${FLAGS[v]||''} ${v}`:v}
+function kMselTxt(k){const S=KF_OPC[k].filter(v=>KF[k].has(v));
+  if(!S.length)return KF_LAB[k][0];
+  return S.length<=2?S.map(v=>k==='pais'?v.replace('Estados Unidos','EE.UU.'):v).join(' + '):`${S.length} seleccionados`;}
+function kMselPintar(){
+  ['pais','empresa','canal'].forEach(k=>{const b=document.getElementById('k6F_'+k);if(!b)return;
+    b.querySelector('span').textContent=kMselTxt(k);b.classList.toggle('act',KF[k].size>0);});
+  const l=document.getElementById('k6Limpiar');if(l)l.style.display=(KF.pais.size||KF.empresa.size||KF.canal.size)?'':'none';
+}
+function kMselAbrir(k,btn,ev){
+  ev.stopPropagation();
+  const p=document.getElementById('k6Fp');
+  if(p.style.display==='block'&&p.dataset.k===k){p.style.display='none';return}
+  p.dataset.k=k;kMselLista(k);
+  const b=btn.getBoundingClientRect();
+  p.style.display='block';p.style.top=(b.bottom+6)+'px';p.style.left=Math.min(b.left,window.innerWidth-250)+'px';
+}
+function kMselLista(k){
+  const p=document.getElementById('k6Fp'),todos=!KF[k].size;
+  p.innerHTML=`<div class="fpanel-h"><span>${KF_LAB[k][1]}</span><span class="cnt">${todos?'todos':KF[k].size+' de '+KF_OPC[k].length}</span></div>
+    <div class="fpanel-list"><label class="msel-all"><input type="checkbox" data-v="*"${todos?' checked':''} onchange="kMselSet('${k}',this)">${KF_LAB[k][0]}</label>
+    ${KF_OPC[k].map(v=>`<label><input type="checkbox" data-v="${kEsc(v)}"${KF[k].has(v)?' checked':''} onchange="kMselSet('${k}',this)">${kEsc(kMselNom(k,v))}</label>`).join('')}</div>
+    <div class="fpanel-act"><button onclick="KF['${k}'].clear();kMselLista('${k}');kMselPintar();kpiRender()">Limpiar</button><button class="prim" onclick="document.getElementById('k6Fp').style.display='none'">Listo</button></div>`;
+}
+function kMselSet(k,el){
+  const v=el.dataset.v;
+  if(v==='*')KF[k].clear();
+  else{if(el.checked)KF[k].add(v);else KF[k].delete(v);
+    if(KF[k].size===KF_OPC[k].length)KF[k].clear();}          // todo marcado = "Todos"
+  kMselLista(k);kMselPintar();kpiRender();
+}
+function kMselLimpiar(){['pais','empresa','canal'].forEach(k=>KF[k].clear());kMselPintar();kpiRender();}
+function kpiFiltrosTexto(){
+  const t=k=>KF[k].size?KF_OPC[k].filter(v=>KF[k].has(v)).join(', '):KF_LAB[k][0];
+  return `País: ${t('pais')} · Empresa: ${t('empresa')} · Canal: ${t('canal')}`;
+}
 function kpiFiltros(){
-  const sp=document.getElementById('k6Pais'),se=document.getElementById('k6Emp'),sc=document.getElementById('k6Can'),sa=document.getElementById('k6Anio');
-  if(!sp)return;
-  const pv=sp.value,ev=se.value,cv=sc.value,av=sa.value;
-  const todas=[...COBROWS,...PUBROWS,...KPI.ventas,...KPI.canales];
-  const paises=ORD_PAIS.filter(p=>todas.some(c=>c.pais===p));
-  sp.innerHTML='<option value="">Todos</option>'+paises.map(p=>`<option value="${kEsc(p)}">${FLAGS[p]||''} ${kEsc(p)}</option>`).join('');
-  sp.value=paises.includes(pv)?pv:'';
-  const emps=[...new Set(todas.map(r=>r.empresa).filter(e=>e&&e!=='*'))].sort((a,b)=>kOrdEmp(a)-kOrdEmp(b)||a.localeCompare(b));
-  se.innerHTML='<option value="">Todas</option>'+emps.map(e=>`<option value="${kEsc(e)}">${kEsc(e)}</option>`).join('');
-  se.value=emps.includes(ev)?ev:'';
-  const cans=[...new Set(todas.map(r=>r.canal).filter(Boolean))].sort((a,b)=>{const i=CANALES.indexOf(a),j=CANALES.indexOf(b);return (i<0?99:i)-(j<0?99:j)||a.localeCompare(b)});
-  sc.innerHTML='<option value="">Todos</option>'+cans.map(c=>`<option value="${kEsc(c)}">${kEsc(c)}</option>`).join('');
-  sc.value=cans.includes(cv)?cv:'';
+  const sa=document.getElementById('k6Anio');if(!sa)return;
+  const av=sa.value;
+  const base=[...COBROWS,...PUBROWS,...KPI.ventas,...KPI.canales];
+  const todas=[...base,...(KPI.inv||[])];
+  KF_OPC.pais=ORD_PAIS.filter(p=>todas.some(c=>c.pais===p));
+  KF_OPC.empresa=[...new Set(todas.map(r=>r.empresa).filter(e=>e&&e!=='*'))].sort((a,b)=>kOrdEmp(a)-kOrdEmp(b)||a.localeCompare(b));
+  KF_OPC.canal=[...new Set(base.map(r=>r.canal).filter(Boolean))].sort((a,b)=>{const i=CANALES.indexOf(a),j=CANALES.indexOf(b);return (i<0?99:i)-(j<0?99:j)||a.localeCompare(b)});
+  ['pais','empresa','canal'].forEach(k=>{KF[k]=new Set([...KF[k]].filter(v=>KF_OPC[k].includes(v)));});
+  kMselPintar();
   const hoy=new Date().getFullYear();
   const anios=[...new Set([hoy,...KPI.ventas.map(r=>r.anio)])].sort((a,b)=>b-a);
   sa.innerHTML=anios.map(a=>`<option value="${a}">${a}</option>`).join('');
@@ -2295,19 +2362,17 @@ function kpiPerTexto(anio,meses){
   if(!M.length)return String(anio);
   const seguidos=M.every((m,i)=>i===0||m===M[i-1]+1);
   if(M.length===12)return `Año ${anio}`;
+  const tope=kpiMesActual(anio);
+  if(tope<12&&M.length===tope&&M[0]===1&&seguidos)return `Año hasta la fecha · ${ab(1)}–${ab(tope)} ${anio}`;
   if(M.length===1)return `${MESES[M[0]-1]} ${anio}`;
   if(seguidos)return `${ab(M[0])}–${ab(M[M.length-1])} ${anio}`;
   return M.length<=4?`${M.map(ab).join(', ')} ${anio}`:`${M.length} meses ${anio}`;
 }
-function kpiFiltrosActivos(){
-  return {pais:document.getElementById('k6Pais').value,empresa:document.getElementById('k6Emp').value,canal:document.getElementById('k6Can').value};
-}
 function kpiTimeline(anio){
   const el=document.getElementById('k6Tl');if(!el)return;
-  const f=kpiFiltrosActivos();
   const V=Array(13).fill(0),O=Array(13).fill(0);
   KPI.ventas.forEach(v=>{if(v.anio!==anio)return;
-    if(f.pais&&v.pais!==f.pais)return;if(f.empresa&&v.empresa!==f.empresa)return;if(f.canal&&v.canal!==f.canal)return;
+    if(!kOk('pais',v.pais)||!kOk('empresa',v.empresa)||!kOk('canal',v.canal))return;
     V[v.mes]+=+v.facturacion||0;O[v.mes]+=+v.objetivo||0;});
   const tope=kpiMesActual(anio);
   el.innerHTML=MESES.map((n,i)=>{const m=i+1,on=KPI.mesesSel.has(m),p=kPct(V[m],O[m]);
@@ -2318,7 +2383,6 @@ function kpiTimeline(anio){
 
 // ---- Modelo: una fila por tienda (país · empresa · canal) ----
 function kpiModelo(){
-  const f=kpiFiltrosActivos();
   const anio=+document.getElementById('k6Anio').value;
   if(!KPI.mesesSel||!KPI.mesesSel.size)kpiPreset('ytd',true);
   const meses=new Set(KPI.mesesSel);
@@ -2333,9 +2397,7 @@ function kpiModelo(){
   KPI.medios.forEach(m=>get(m.pais,m.empresa,m.canal).med=m);
   KPI.canales.forEach(c=>get(c.pais,c.empresa,c.canal).man=c);
   let rows=Object.values(M);
-  if(f.pais)rows=rows.filter(r=>r.pais===f.pais);
-  if(f.empresa)rows=rows.filter(r=>r.empresa===f.empresa);
-  if(f.canal)rows=rows.filter(r=>r.canal===f.canal);
+  rows=rows.filter(r=>kOk('pais',r.pais)&&kOk('empresa',r.empresa)&&kOk('canal',r.canal));
   // El estado manual (botón Agregar canal) manda sobre el automático (tiene publicaciones)
   rows.forEach(r=>{
     if(r.man){r.activo=r.man.estado==='activo';r.estado='m_'+r.man.estado;}
@@ -2343,7 +2405,7 @@ function kpiModelo(){
   });
   rows.sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)
     ||kOrdEmp(a.empresa)-kOrdEmp(b.empresa)||a.empresa.localeCompare(b.empresa)||CANALES.indexOf(a.canal)-CANALES.indexOf(b.canal));
-  return {rows,anio,meses:[...meses].sort((a,b)=>a-b),pais:f.pais};
+  return {rows,anio,meses:[...meses].sort((a,b)=>a-b)};
 }
 const ORD_EMP=['Masia Group','Masia Compressors','Masia Rentals','Xstore','Camozzi'];
 const kOrdEmp=e=>{const i=ORD_EMP.indexOf(e);return i<0?99:i};
@@ -2386,15 +2448,15 @@ function kpiRender(){
   const perTx=kpiPerTexto(anio,meses);
   const tlTx=document.getElementById('k6TlTx');if(tlTx)tlTx.textContent=perTx;
   const k=(c,lab,val,sub,money)=>`<div class="kpi ${c}"><div class="k-lab">${lab}</div><div class="k-val${money?' money':''}">${val}</div><div class="k-sub">${sub}</div></div>`;
-  const kc=p=>p==null?'is-n':p>=90?'is-g':p>=75?'is-y':'is-r';
+  const kc=(p,t)=>p==null?'is-n':'is-'+cls(p,t);
   // Fila 1: catálogo (canales, publicaciones, fotos) · Fila 2: ventas (acumulado, meta, % cumplimiento)
   document.getElementById('k6Kpis').innerHTML=
      k(kc(kPct(uAct,uTot)),'Canales publicados y activos',`${uAct}<small> / ${uTot}</small>`,`${kPct(uAct,uTot)??0}% · combinaciones canal·empresa activas (cada tienda propia cuenta como una)`)
     +k(kc(pPub),'Publicaciones reales vs posibles',pPub==null?'—':pPub+'<small>%</small>',uPos?`${fmt(uReal)} reales de ${fmt(uPos)} posibles según la matriz`:'Sin matriz cargada')
     +k(kc(p61),'Política 6 fotos + 1 video',p61==null?'—':p61+'<small>%</small>',t.medidas?`${fmt(t.cumplen)} de ${fmt(t.medidas)} publicaciones revisadas · 6 fotos ${kPct(t.fotos,t.medidas)}% · video ${kPct(t.video,t.medidas)}%`:'Sin archivo de fotos y video cargado')
-    +k('k-blue','Ventas acumuladas · '+perTx,kUSD(t.ventas),t.ventas||t.meta?'USD netos':'Sin ventas cargadas para este período',true)
-    +k('k-amb','Meta acumulada · '+perTx,kUSD(t.meta),t.meta?'USD':'Sin metas cargadas para este período',true)
-    +k(kc(pM),'% cumplimiento vs meta',pM==null?'—':pM+'<small>%</small>',pM==null?'Falta la meta del período':`Faltan ${kUSD(Math.max(0,t.meta-t.ventas))} para la meta`);
+    +k('k-blue','Ventas acumuladas',kUSD(t.ventas),(t.ventas||t.meta?perTx+' · USD netos':'Sin ventas cargadas para '+perTx),true)
+    +k('k-amb','Meta acumulada',kUSD(t.meta),(t.meta?perTx+' · USD':'Sin metas cargadas para '+perTx),true)
+    +k(kc(pM,'meta'),'% cumplimiento vs meta',pM==null?'—':pM+'<small>%</small>',pM==null?'Falta la meta del período':`Faltan ${kUSD(Math.max(0,t.meta-t.ventas))} para la meta`);
   document.getElementById('k6PerHint').textContent=perTx+' · USD netos';
 
   // Ventas vs meta por país
@@ -2405,7 +2467,7 @@ function kpiRender(){
     const s=kpiSuma(porPaisV[p]),pm=kPct(s.ventas,s.meta),q=kPct(s.cumplen,s.medidas);
     const up=UNI.filter(u=>u.pais===p),upA=up.filter(u=>u.activo).length;
     const ur=up.reduce((a,u)=>a+u.real,0),ups=up.reduce((a,u)=>a+u.pos,0);
-    const c=pm==null?'var(--neutro)':col(pm);
+    const c=pm==null?'var(--neutro)':col(pm,'meta');
     return `<div class="canal-card">
       <div class="ct"><span class="cn"><span class="flag">${FLAGS[p]||''}</span> ${kEsc(p)}</span><span class="cp" style="color:${c}">${pm==null?'—':pm+'%'}</span></div>
       <div class="cv"><b>${kUSD(s.ventas)}</b> ${s.meta?'de '+kUSD(s.meta):'· <i>sin meta cargada</i>'}</div>
@@ -2434,6 +2496,8 @@ function kpiRender(){
 
   // Detalle por tienda (tabla estilo Excel)
   KPI._tiendas=tiendas;kpiTabla();
+  kpiInvRender();
+  if(PAGE===7)kpiPintarCargas();
 }
 
 // ---- Detalle por tienda: tabla estilo Excel (ordenar por columna + filtros por columna) ----
@@ -2449,7 +2513,7 @@ const K_COLS=[
   {k:'pPub',l:'% Pub.',t:'pct',v:r=>kPct(r.real,r.pos)},
   {k:'ventas',l:'Ventas',t:'usd',v:r=>r.ventas},
   {k:'meta',l:'Meta',t:'usd',v:r=>r.meta},
-  {k:'pMeta',l:'% Meta',t:'pct',v:r=>kPct(r.ventas,r.meta)},
+  {k:'pMeta',l:'% Meta',t:'pct',sem:'meta',v:r=>kPct(r.ventas,r.meta)},
   {k:'pFot',l:'6 fotos',t:'pct',v:r=>r.med?kPct(r.med.con_fotos,r.med.medidas):null},
   {k:'pVid',l:'Video',t:'pct',v:r=>r.med?kPct(r.med.con_video,r.med.medidas):null},
   {k:'p61',l:'6 + 1',t:'pct',v:r=>r.med?kPct(r.med.cumplen,r.med.medidas):null},
@@ -2475,7 +2539,7 @@ function kpiTabla(){
   const cel=(c,r)=>{const v=c.v(r);
     if(c.k==='estado')return `<td class="l"><span class="estado ${r.estado}">${K_EST[r.estado]}</span></td>`;
     if(c.t==='cat')return `<td class="l">${c.k==='pais'?(FLAGS[v]||'')+' ':''}${kEsc(v)}</td>`;
-    if(c.t==='pct')return `<td>${pill(v)}</td>`;
+    if(c.t==='pct')return `<td>${pill(v,c.sem)}</td>`;
     if(c.t==='usd')return `<td>${v?kUSD(v):'<span class="dim">—</span>'}</td>`;
     return `<td>${v==null?'<span class="dim">—</span>':(v?fmt(v):'<span class="dim">0</span>')}</td>`;};
   let h=`<div class="k6t-bar"><input class="objtxt" placeholder="Buscar país, empresa, canal o estado…" value="${kEsc(KTAB.q)}" oninput="KTAB.q=this.value;clearTimeout(window._ktq);window._ktq=setTimeout(()=>{kpiTabla();const i=document.querySelector('.k6t-bar input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
@@ -2486,7 +2550,7 @@ function kpiTabla(){
     return `<th class="${c.t==='cat'?'l':''}"><span class="th-sort" onclick="kpiOrdenar('${c.k}')">${c.l}<i class="arr${on?' on':''}">${on?(KTAB.dir>0?'▲':'▼'):'↕'}</i></span>${c.t==='cat'?`<button class="th-filter${fa?' act':''}" onclick="kpiFiltroCol('${c.k}',this,event)">▾</button>`:''}${c.u?`<span class="u">${c.u}</span>`:''}</th>`}).join('')}</tr></thead><tbody>`;
   h+=rs.length?rs.map(r=>`<tr>${K_COLS.map(c=>cel(c,r)).join('')}</tr>`).join(''):`<tr><td colspan="${K_COLS.length}" class="empty">Ninguna tienda cumple los filtros.</td></tr>`;
   if(rs.length){const s=kpiSuma(rs);
-    h+=`<tr class="totrow"><td class="l" colspan="4">TOTAL ${rs.length<base.length?'(filtrado)':''}</td><td>${fmt(s.real)}</td><td>${fmt(s.pos)}</td><td>${pill(kPct(s.real,s.pos))}</td><td>${kUSD(s.ventas)}</td><td>${kUSD(s.meta)}</td><td>${pill(kPct(s.ventas,s.meta))}</td><td>${pill(kPct(s.fotos,s.medidas))}</td><td>${pill(kPct(s.video,s.medidas))}</td><td>${pill(kPct(s.cumplen,s.medidas))}</td><td>${s.medidas?fmt(s.medidas):'—'}</td></tr>`;}
+    h+=`<tr class="totrow"><td class="l" colspan="4">TOTAL ${rs.length<base.length?'(filtrado)':''}</td><td>${fmt(s.real)}</td><td>${fmt(s.pos)}</td><td>${pill(kPct(s.real,s.pos))}</td><td>${kUSD(s.ventas)}</td><td>${kUSD(s.meta)}</td><td>${pill(kPct(s.ventas,s.meta),'meta')}</td><td>${pill(kPct(s.fotos,s.medidas))}</td><td>${pill(kPct(s.video,s.medidas))}</td><td>${pill(kPct(s.cumplen,s.medidas))}</td><td>${s.medidas?fmt(s.medidas):'—'}</td></tr>`;}
   el.innerHTML=h+'</tbody></table></div>';
 }
 function kpiOrdenar(k){
@@ -2503,6 +2567,7 @@ function kpiFiltroCol(k,btn,ev){
   const vals=[...new Set(otras.map(r=>String(c.v(r))))].sort((a,b)=>k==='pais'?ORD_PAIS.indexOf(a)-ORD_PAIS.indexOf(b):a.localeCompare(b));
   const sel=KTAB.filt[k];
   const p=document.getElementById('k6Fp');
+  p.dataset.k='col:'+k;
   p.innerHTML=`<div class="fpanel-h"><span>${c.l}</span><span class="cnt">${vals.length}</span></div>
     <div class="fpanel-list">${vals.map(v=>`<label><input type="checkbox" value="${kEsc(v)}"${!sel||!sel.size||sel.has(v)?' checked':''}>${k==='pais'?(FLAGS[v]||'')+' ':''}${kEsc(v)}</label>`).join('')}</div>
     <div class="fpanel-act"><button onclick="document.querySelectorAll('#k6Fp input').forEach(i=>i.checked=!i.checked)">Invertir</button><button class="prim" onclick="kpiFiltroAplicar('${k}')">Aplicar</button></div>`;
@@ -2608,7 +2673,7 @@ function kpiExplicar(f){
   if(!f.validada){
     L.push(`<b>Sin validar por título:</b> esta tienda no tiene títulos cargados, así que no se comparó contra la matriz. El % usa <b>todas</b> las publicaciones cargadas (${fmt(f.cargadas)}).`);
     if(f.skuCarg&&f.cargadas/f.skuCarg>=3)L.push(`Esas ${fmt(f.cargadas)} publicaciones tienen solo <b>${fmt(f.skuCarg)} SKUs distintos</b> (≈${Math.round(f.cargadas/f.skuCarg)} publicaciones por SKU): probablemente variantes, publicaciones repetidas o del catálogo de otra empresa.`);
-    L.push('Para validarla, vuelve a cargar el export de esta tienda con la columna de <b>título</b> (📦 Cargar publicaciones).');
+    L.push('Para validarla, el equipo de eCommerce debe volver a cargar el export de esta tienda con la columna de <b>título</b> (Operaciones › 📦 Cargar publicaciones).');
   }else{
     L.push(`De <b>${fmt(f.cargadas)}</b> publicaciones cargadas, <b>${fmt(f.cumplen)}</b> coinciden con un título de la matriz (son las que cuentan como reales).`);
     if(f.fuera)L.push(`<b>${fmt(f.fuera)}</b> están fuera de la matriz (título distinto al de la matriz o producto que no está en ella).`);
@@ -2648,7 +2713,6 @@ function kpiDetalle(pais,canal,empresa){
   h+=filas.map(f=>{const L=kpiExplicar(f);return L.length?`<div class="note kd-note">${filas.length>1?`<b>${kEsc(f.empresa)}:</b> `:''}${L.join(' ')}</div>`:''}).join('');
   if(!filas.length)h+='<div class="note kd-note">Este canal no tiene datos en el panel: no está en Cobertura ni tiene publicaciones cargadas.</div>';
   h+=`<div id="kdTit"></div>`;
-  if(esAdmin())h+=`<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn-cov ghost" onclick="document.getElementById('k6Det').style.display='none';kpiModalCanal(${kEsc(JSON.stringify({pais,canal,empresa:empresa||'*'}))})">Cambiar estado</button></div>`;
   document.getElementById('kdBody').innerHTML=h;
   document.getElementById('k6Det').style.display='flex';
 }
@@ -2681,6 +2745,166 @@ function kpiPintarTitulos(){
     </tbody></table></div>`;
   const box=document.getElementById('kdTit');box.innerHTML=h;
   const inp=box.querySelector('input');if(inp&&KDET.filtro){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
+}
+
+// ---- Inventario (carga manual mientras se conecta el ERP) ----
+function kpiInvFilas(){
+  // Respeta los filtros de país y empresa (el inventario no tiene canal).
+  // Filas sin empresa ('*') solo se muestran cuando no se filtra por empresa.
+  return (KPI.inv||[]).filter(r=>kOk('pais',r.pais)&&(r.empresa==='*'?!KF.empresa.size:kOk('empresa',r.empresa)));
+}
+function kpiInvRender(){
+  const el=document.getElementById('k6Inv');if(!el)return;
+  if(KPI.faltaInv){el.innerHTML='<div class="stock-ph">Falta crear la tabla de inventario en Supabase.</div>';return}
+  const rs=kpiInvFilas();
+  if(!rs.length){el.innerHTML=`<div class="stock-ph"><b>Sin inventario cargado${KF.pais.size||KF.empresa.size?' para este filtro':''}.</b> El equipo de eCommerce lo carga en <b>Operaciones › Datos del Dashboard</b> mientras se conecta el ERP.</div>`;return}
+  const P={};rs.forEach(r=>{const o=P[r.pais]=P[r.pais]||{skus:0,skus_stock:0,unidades:0,fecha:null,emps:[]};
+    o.skus+=+r.skus;o.skus_stock+=+r.skus_stock;o.unidades+=+r.unidades;if(!o.fecha||r.fecha>o.fecha)o.fecha=r.fecha;if(r.empresa!=='*')o.emps.push(r);});
+  const fF=f=>f?new Date(f).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'}):'—';
+  el.innerHTML='<div class="canal-grid">'+ORD_PAIS.filter(p=>P[p]).map(p=>{const o=P[p];
+    return `<div class="canal-card">
+      <div class="ct"><span class="cn"><span class="flag">${FLAGS[p]||''}</span> ${kEsc(p)}</span><span class="cp" style="color:var(--azul)">${fmt(o.skus_stock)}</span></div>
+      <div class="cv">SKUs con stock · <b>${fmt(Math.round(o.unidades))}</b> unidades</div>
+      ${o.emps.length>1?`<div class="cl"><span>${o.emps.sort((a,b)=>kOrdEmp(a.empresa)-kOrdEmp(b.empresa)).map(e=>`${kEsc(e.empresa)} <b>${fmt(e.skus_stock)}</b>`).join(' · ')}</span></div>`:''}
+      <div class="cl"><span>SKUs en el archivo <b>${fmt(o.skus)}</b></span><span>Carga: ${fF(o.fecha)}</span></div>
+    </div>`}).join('')+'</div>';
+}
+async function kpiCargarInventario(e){
+  const files=[...e.target.files];e.target.value='';
+  if(!files.length)return;
+  if(KPI.faltaInv){alert('Falta crear la tabla de inventario en Supabase.');return}
+  try{
+    const acc={};const avisos=[];let leidas=0;
+    for(const file of files){
+      const wb=await kpiLeerLibro(file);
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      if(!rows.length){avisos.push(file.name+': hoja vacía');continue}
+      const keys=Object.keys(rows[0]);
+      const cP=kCol(keys,['pais','country']),cE=kCol(keys,['empresa','company','filial']);
+      const cS=kCol(keys,['sku','codigo','código','item','articulo','artículo','referencia','part number','numero de parte','producto_servicio','codigo producto']);
+      const cQ=kCol(keys,['stock','existencia','existencias','inventario','cantidad','qty','quantity','disponible','on hand','saldo']);
+      const cD=kCol(keys,['descripcion','descripción','description','nombre']);
+      if(!cS||!cQ){avisos.push(`${file.name}: faltan las columnas SKU y/o STOCK`);continue}
+      const det=cP?null:detectarPCE(file.name);
+      if(det&&!det.pais){avisos.push(`${file.name}: sin columna PAIS y no pude deducir el país por el nombre del archivo`);continue}
+      rows.forEach(x=>{
+        const sku=String(x[cS]==null?'':x[cS]).trim().toUpperCase();if(!sku)return;
+        const pais=det?det.pais:normPais(x[cP]);if(!pais)return;
+        const empresa=cE&&String(x[cE]).trim()?kEmpresa(x[cE]):(det&&det.empresa)||'*';
+        const k=pais+'|'+empresa+'|'+sku;
+        const o=acc[k]=acc[k]||{pais,empresa,sku,descripcion:cD?String(x[cD]||'').trim().slice(0,300)||null:null,stock:0};
+        o.stock+=kNum(x[cQ]);leidas++;
+      });
+    }
+    const filas=Object.values(acc);
+    if(!filas.length){alert('No encontré inventario para cargar.\n\n'+avisos.join('\n')+'\n\nColumnas: PAIS · EMPRESA (opcional) · SKU · STOCK · DESCRIPCION (opcional). Usa ⬇ Plantillas.');return}
+    const paises=[...new Set(filas.map(f=>f.pais))];
+    const res=paises.map(p=>{const f=filas.filter(x=>x.pais===p);return `• ${p}: ${fmt(f.length)} SKUs · ${fmt(f.filter(x=>x.stock>0).length)} con stock · ${fmt(Math.round(f.reduce((a,b)=>a+Math.max(0,b.stock),0)))} unidades`}).join('\n');
+    if(!confirm(`Inventario detectado (${fmt(leidas)} filas):\n\n${res}${avisos.length?'\n\n⚠ '+avisos.join('\n⚠ '):''}\n\nEsto REEMPLAZA el inventario guardado de: ${paises.join(', ')}. ¿Continuar?`))return;
+    prog('Guardando inventario…');
+    const del=await SB.from('kpi_inventario').delete().in('pais',paises);
+    if(del.error)throw del.error;
+    for(let i=0;i<filas.length;i+=1000){
+      const {error}=await SB.from('kpi_inventario').insert(filas.slice(i,i+1000));
+      if(error)throw error;
+      prog(`Guardando inventario: ${fmt(Math.min(filas.length,i+1000))} / ${fmt(filas.length)}…`);
+    }
+    prog(null);
+    await kpiAbrir(true);
+    alert(`✓ Inventario guardado (${paises.join(', ')}).`);
+  }catch(err){prog(null);alert('No se pudo guardar el inventario: '+(err.message||err));}
+}
+
+// ---- Operaciones › Datos del Dashboard: estado de cada carga ----
+function kpiPintarCargas(){
+  const el=document.getElementById('k7Cargas');if(!el)return;
+  if(!KPI.cargado){el.innerHTML='<div class="small">Cargando…</div>';return}
+  const fF=f=>f?new Date(f).toLocaleString('es',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  const maxF=a=>a.reduce((m,r)=>!m||(r.fecha&&r.fecha>m)?r.fecha:m,null);
+  const V=KPI.ventas,anios=[...new Set(V.map(r=>r.anio))].sort();
+  const yA=new Date().getFullYear(),vA=V.filter(r=>r.anio===yA);
+  const M=KPI.medios,I=KPI.inv||[],C=KPI.canales;
+  const admin=esAdmin();
+  const card=(ic,tit,desc,stat,btns)=>`<div class="carga"><div class="cg-h"><span class="cg-i">${ic}</span><div><b>${tit}</b><div class="small" style="margin:2px 0 0">${desc}</div></div></div>
+    <div class="cg-s">${stat}</div><div class="cg-b">${btns}</div></div>`;
+  el.innerHTML=
+    card('💵','Ventas y metas','Excel por mes · país · empresa · canal (USD netos). Reemplaza los años que trae.',
+      V.length?`<b>${fmt(V.length)}</b> filas · años ${anios.join(', ')}<br>${yA}: ventas <b>${kUSD(vA.reduce((a,r)=>a+(+r.facturacion||0),0))}</b> · meta ${kUSD(vA.reduce((a,r)=>a+(+r.objetivo||0),0))}<br>Última carga: ${fF(maxF(V))}`:'<span class="dim">Sin datos cargados</span>',
+      admin?`<button class="btn-cov" onclick="document.getElementById('fileVentas').click()">💵 Cargar ventas y metas</button>`:'<span class="small">Solo el administrador puede cargar ventas y metas.</span>')
+   +card('📷','Fotos y video (política 6 + 1)','Una fila por publicación: PAIS · EMPRESA · CANAL · SKU · FOTOS · VIDEO. Reemplaza solo las tiendas que trae.',
+      M.length?`<b>${fmt(M.length)}</b> tiendas medidas · <b>${fmt(M.reduce((a,r)=>a+r.medidas,0))}</b> publicaciones revisadas<br>Última carga: ${fF(maxF(M))}`:'<span class="dim">Sin datos cargados</span>',
+      `<button class="btn-cov" onclick="document.getElementById('fileMedios').click()">📷 Cargar fotos y video</button>`)
+   +card('🏷','Inventario','Mientras se conecta el ERP. PAIS · EMPRESA (opcional) · SKU · STOCK. Reemplaza los países que trae.',
+      KPI.faltaInv?'<span class="dim">Falta crear la tabla en Supabase</span>':I.length?`${[...new Set(I.map(r=>r.pais))].sort((a,b)=>ORD_PAIS.indexOf(a)-ORD_PAIS.indexOf(b)).map(p=>{const f=I.filter(r=>r.pais===p);return `${FLAGS[p]||''} ${kEsc(p)}: <b>${fmt(f.reduce((a,r)=>a+r.skus_stock,0))}</b> SKUs con stock`}).join('<br>')}<br>Última carga: ${fF(maxF(I))}`:'<span class="dim">Sin inventario cargado</span>',
+      `<button class="btn-cov" onclick="document.getElementById('fileInv').click()">🏷 Cargar inventario</button>`)
+   +card('＋','Canales y estado','Canales que existen sin datos cargados, pendientes o no creados. El estado manual manda sobre el automático.',
+      C.length?`<b>${fmt(C.length)}</b> marcados a mano · ${['activo','pendiente','inactivo'].map(e=>`${{activo:'activos',pendiente:'pendientes',inactivo:'no creados'}[e]} ${C.filter(c=>c.estado===e).length}`).join(' · ')}`:'<span class="dim">Ninguno marcado a mano</span>',
+      admin?`<button class="btn-cov" onclick="kpiModalCanal()">＋ Agregar canal / ver lista</button>`:'<span class="small">Solo el administrador puede editar estados.</span>')
+   +card('⬇','Plantillas y exportación','Formatos de ejemplo de cada carga, y el detalle por tienda del Dashboard en Excel (con los filtros que tenga aplicados).',
+      `Estado de las tablas: ${KPI.faltaSQL?'<b style="color:var(--rojo)">faltan tablas</b>':'<b style="color:var(--verde)">OK</b>'}`,
+      `<button class="btn-cov ghost" onclick="kpiPlantillas()">⬇ Plantillas</button><button class="btn-cov ghost" onclick="kpiExcel()">⬇ Excel de KPIs</button><button class="btn-cov ghost" onclick="kpiAbrir(true)">↻ Recargar</button>`);
+}
+
+// ---- Reporte PDF del Dashboard (para gerencia) ----
+function kpiReportePDF(){
+  if(!KPI.cargado){alert('Espera a que termine de cargar el Dashboard.');return}
+  kpiRender();
+  const {anio,meses}=kpiModelo();
+  const rows=KPI._tiendas||[],t=kpiSuma(rows),UNI=kUnidades(rows);
+  const hoy=new Date().toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'});
+  const perTx=kpiPerTexto(anio,meses);
+  const uAct=UNI.filter(u=>u.activo).length,uTot=UNI.length;
+  const uReal=UNI.reduce((a,u)=>a+u.real,0),uPos=UNI.reduce((a,u)=>a+u.pos,0);
+  const pM=kPct(t.ventas,t.meta),pPub=kPct(uReal,uPos),p61=kPct(t.cumplen,t.medidas),pAct=kPct(uAct,uTot);
+  const kc=(p,s)=>p==null?'n':cls(p,s);
+  const head=sub=>`<div class="rep-head"><div class="rt"><small>Masia Group · E-commerce</small>${sub}</div>
+      <div class="rd">${hoy}<br><b>${perTx}</b><br>${kEsc(kpiFiltrosTexto())}</div></div>`;
+  const foot=`<div class="rep-foot"><span>Masia Group · Dashboard e-Commerce</span><span>Confidencial · uso interno</span></div>`;
+  let H=`<div class="rep-page">${head('Dashboard de gestión')}
+    <div class="rep-kpis k3">
+      ${repK('Canales publicados y activos',`${uAct} / ${uTot}`,kc(pAct,'pub'))}
+      ${repK('Publicaciones reales vs posibles',pPub==null?'—':pPub+'%',kc(pPub,'pub'))}
+      ${repK('Política 6 fotos + 1 video',p61==null?'—':p61+'%',kc(p61,'pub'))}
+      ${repK('Ventas acumuladas',kUSD(t.ventas),'b')}
+      ${repK('Meta acumulada',kUSD(t.meta),'b')}
+      ${repK('% cumplimiento vs meta',pM==null?'—':pM+'%',kc(pM,'meta'))}</div>`;
+  // Ventas vs meta por país
+  const paises=ORD_PAIS.filter(p=>rows.some(r=>r.pais===p));
+  H+='<div class="rep-sub">Ventas vs meta por país</div><table class="rep"><thead><tr><th class="l">País</th><th>Ventas</th><th>Meta</th><th>% Meta</th><th>Pub. reales</th><th>Pub. posibles</th><th>% Pub.</th><th>Canales activos</th><th>6 + 1</th></tr></thead><tbody>';
+  paises.forEach(p=>{const rs=rows.filter(r=>r.pais===p),s=kpiSuma(rs),us=UNI.filter(u=>u.pais===p);
+    const ur=us.reduce((a,u)=>a+u.real,0),up=us.reduce((a,u)=>a+u.pos,0);
+    H+=`<tr><td class="l">${FLAGS[p]||''} ${kEsc(p)}</td><td>${kUSD(s.ventas)}</td><td>${s.meta?kUSD(s.meta):'—'}</td><td>${pp(kPct(s.ventas,s.meta),'meta')}</td>
+      <td>${fmt(ur)}</td><td>${fmt(up)}</td><td>${pp(kPct(ur,up))}</td><td>${us.filter(u=>u.activo).length} / ${us.length}</td><td>${pp(kPct(s.cumplen,s.medidas))}</td></tr>`;});
+  H+=`<tr style="font-weight:700;border-top:2px solid var(--azul)"><td class="l">TOTAL</td><td>${kUSD(t.ventas)}</td><td>${kUSD(t.meta)}</td><td>${pp(pM,'meta')}</td>
+    <td>${fmt(uReal)}</td><td>${fmt(uPos)}</td><td>${pp(pPub)}</td><td>${uAct} / ${uTot}</td><td>${pp(p61)}</td></tr></tbody></table>`;
+  // Canales que requieren atención
+  const malos=UNI.filter(u=>!u.activo||(kPct(u.real,u.pos)!=null&&kPct(u.real,u.pos)<SEM.pub[0]));
+  if(malos.length){
+    H+='<div class="rep-sub">Canales que requieren atención</div><ul class="acc">';
+    const ST={off:'sin publicaciones',pendiente:'pendiente',inactivo:'no creado'};
+    malos.slice(0,14).forEach(u=>{const q=kPct(u.real,u.pos);
+      H+=`<li class="${u.activo?'y':'r'}"><b>${kEsc(u.pais)} · ${kEsc(u.canal)}${u.empresa?' · '+kEsc(u.empresa):''}</b> — ${u.activo?`publicaciones al ${q}% (${fmt(u.real)} de ${fmt(u.pos)})`:ST[u.st]||'sin publicaciones'}</li>`;});
+    if(malos.length>14)H+=`<li class="b">… y ${malos.length-14} más (ver detalle por tienda).</li>`;
+    H+='</ul>';
+  }
+  H+=foot+'</div>';
+  // Página 2: detalle por tienda (con el orden y filtros de la tabla)
+  const det=kpiTablaFilas();
+  H+=`<div class="rep-page">${head('Detalle por tienda')}<table class="rep"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th class="l">Canal</th><th class="l">Estado</th><th>Pub. reales</th><th>Posibles</th><th>% Pub.</th><th>Ventas</th><th>Meta</th><th>% Meta</th><th>6 + 1</th></tr></thead><tbody>`;
+  det.forEach(r=>{H+=`<tr><td class="l">${kEsc(r.pais)}</td><td class="l">${r.empresa==='*'?'(tienda)':kEsc(r.empresa)}</td><td class="l">${kEsc(r.canal)}</td><td class="l">${K_EST[r.estado]}</td>
+    <td>${fmt(r.real)}</td><td>${fmt(r.pos)}</td><td>${pp(kPct(r.real,r.pos))}</td><td>${r.ventas?kUSD(r.ventas):'—'}</td><td>${r.meta?kUSD(r.meta):'—'}</td><td>${pp(kPct(r.ventas,r.meta),'meta')}</td><td>${pp(r.med?kPct(r.med.cumplen,r.med.medidas):null)}</td></tr>`;});
+  H+='</tbody></table>'+foot+'</div>';
+  // Página 3: inventario (si hay)
+  const inv=kpiInvFilas();
+  if(inv.length){
+    H+=`<div class="rep-page">${head('Inventario por país')}<table class="rep"><thead><tr><th class="l">País</th><th class="l">Empresa</th><th>SKUs con stock</th><th>Unidades</th><th>SKUs en archivo</th><th>Última carga</th></tr></thead><tbody>`;
+    inv.slice().sort((a,b)=>ORD_PAIS.indexOf(a.pais)-ORD_PAIS.indexOf(b.pais)||kOrdEmp(a.empresa)-kOrdEmp(b.empresa)).forEach(r=>{
+      H+=`<tr><td class="l">${FLAGS[r.pais]||''} ${kEsc(r.pais)}</td><td class="l">${r.empresa==='*'?'—':kEsc(r.empresa)}</td><td>${fmt(r.skus_stock)}</td><td>${fmt(Math.round(r.unidades))}</td><td>${fmt(r.skus)}</td><td>${r.fecha?new Date(r.fecha).toLocaleDateString('es'):'—'}</td></tr>`;});
+    H+='</tbody></table><div class="small" style="margin-top:8px">Inventario cargado manualmente mientras se conecta el ERP.</div>'+foot+'</div>';
+  }
+  document.getElementById('reporte').innerHTML=H;
+  document.body.classList.add('modo-reporte');
+  window.print();
 }
 
 // ---- Lectura de Excel ----
@@ -2832,10 +3056,15 @@ function kpiPlantillas(){
     {'PAIS':'Estados Unidos','EMPRESA':'Masia Group','CANAL':'eBay','SKU':'MAS.1613610500','FOTOS':7,'VIDEO':'SI'},
     {'PAIS':'Colombia','EMPRESA':'Masia Group','CANAL':'Masia Shop','SKU':'MAS.2205490565','FOTOS':4,'VIDEO':'NO'}
   ]),'Fotos y video');
-  XLSX.writeFile(wb,'Plantillas_KPIs_Canales.xlsx');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([
+    {'PAIS':'Estados Unidos','EMPRESA':'Masia Group','SKU':'MAS.1613610500','STOCK':24,'DESCRIPCION':'Filtro de aceite'},
+    {'PAIS':'Venezuela','EMPRESA':'Masia Compressors','SKU':'MAS.2205490565','STOCK':0,'DESCRIPCION':'Separador de aceite'}
+  ]),'Inventario');
+  XLSX.writeFile(wb,'Plantillas_Dashboard.xlsx');
 }
 function kpiExcel(){
-  if(!KPI.cargado){alert('Abre la pestaña primero.');return}
+  if(!KPI.cargado){alert('Espera a que terminen de cargar los datos.');return}
+  kpiRender();
   const {anio,meses}=kpiModelo();
   const out=kpiTablaFilas().map(r=>{const m=r.med;return {
     'País':r.pais,'Empresa':r.empresa==='*'?'(tienda)':r.empresa,'Canal':r.canal,'Estado':K_EST[r.estado],'Nota':r.man&&r.man.nota||'','Publicaciones cargadas':r.pub,

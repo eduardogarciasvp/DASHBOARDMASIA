@@ -90,16 +90,21 @@ Una fila por listing, con estas columnas (los nombres se detectan solos):
 ---
 
 ## Secciones
-- **KPI** (gerencia): enlace `…/#kpi`. Solo el tablero de indicadores, sin botones operativos.
-- **Operaciones** (departamento de eCommerce): enlace `…/#operaciones`. Detalle, Resumen, Cobertura, Validación y Objetivos, con carga de matriz, publicaciones y PDFs.
+- **Dashboard** (gerencia): enlace `…/#dashboard` (también `…/#kpi`). Solo indicadores, filtros de selección múltiple y **📄 Reporte PDF**; sin botones de carga.
+- **Operaciones** (departamento de eCommerce): enlace `…/#operaciones`. Detalle, Resumen, Cobertura, Validación, Objetivos y **Datos del Dashboard** (cargas de ventas y metas, fotos y video, inventario, estado de canales, plantillas y Excel).
 - El panel abre en la última sección usada en ese navegador (por defecto, KPI). Ambas usan el mismo login y los mismos permisos.
 
-## Sección KPI
+## Semáforos
+- % meta: 0–49 rojo · 50–74 amarillo · 75+ verde
+- % publicaciones (también canales activos y 6 + 1): 0–69 rojo · 70–89 amarillo · 90+ verde
+- % SKU: 0–69 rojo · 70–99 amarillo · 100+ verde
+
+## Sección Dashboard (datos en Operaciones › Datos del Dashboard)
 Canales publicados y activos, ventas vs meta por canal, % de cumplimiento y política **6 fotos + 1 video**.
 Stock por país y publicaciones posibles quedan para la fase 2 (conexión con el ERP).
 
 **Montaje (una vez):** Supabase → SQL Editor → pega `kpis_setup.sql` → **Run**.
-Solo crea tablas nuevas (`kpi_ventas`, `kpi_medios`); no toca ninguna existente.
+Solo crea tablas nuevas (`kpi_ventas`, `kpi_medios`, `kpi_canales`, `kpi_inventario` y la vista `kpi_inventario_resumen`); no toca ninguna existente.
 
 **Datos:**
 - **💵 Cargar ventas y metas** (solo admin): Excel con `AÑO · MES · PAIS · EMPRESA · CANAL · FACTURACION · OBJETIVO` (USD netos).

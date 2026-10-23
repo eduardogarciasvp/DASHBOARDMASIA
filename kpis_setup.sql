@@ -107,3 +107,45 @@ drop policy if exists p_kc_upd on public.kpi_canales;
 create policy p_kc_upd on public.kpi_canales for update to authenticated using (public.is_admin()) with check (public.is_admin());
 drop policy if exists p_kc_del on public.kpi_canales;
 create policy p_kc_del on public.kpi_canales for delete to authenticated using (public.is_admin());
+
+-- ============================================================
+-- 4) INVENTARIO MANUAL (botón "Cargar inventario" en Operaciones ›
+--    Datos del Dashboard), mientras se conecta el ERP.
+--    Una fila por SKU; cada carga reemplaza los países que trae.
+--    El dashboard lee solo el resumen por país · empresa.
+-- ============================================================
+create table if not exists public.kpi_inventario (
+  id           bigint generated always as identity primary key,
+  pais         text    not null,
+  empresa      text    not null default '*',
+  sku          text    not null,
+  descripcion  text,
+  stock        numeric not null default 0,
+  subido_por   uuid references auth.users(id),
+  fecha        timestamptz not null default now()
+);
+create index if not exists kpi_inventario_pais_idx on public.kpi_inventario (pais);
+
+drop trigger if exists trg_sello_kpi_inventario on public.kpi_inventario;
+create trigger trg_sello_kpi_inventario before insert or update on public.kpi_inventario
+  for each row execute function public.sello_kpi();
+
+alter table public.kpi_inventario enable row level security;
+drop policy if exists p_ki_sel on public.kpi_inventario;
+create policy p_ki_sel on public.kpi_inventario for select to authenticated using (true);
+drop policy if exists p_ki_ins on public.kpi_inventario;
+create policy p_ki_ins on public.kpi_inventario for insert to authenticated with check (true);
+drop policy if exists p_ki_upd on public.kpi_inventario;
+create policy p_ki_upd on public.kpi_inventario for update to authenticated using (true) with check (true);
+drop policy if exists p_ki_del on public.kpi_inventario;
+create policy p_ki_del on public.kpi_inventario for delete to authenticated using (true);
+
+create or replace view public.kpi_inventario_resumen with (security_invoker = true) as
+  select pais, empresa,
+         count(*)::int                                        as skus,
+         (count(*) filter (where stock > 0))::int             as skus_stock,
+         coalesce(sum(stock) filter (where stock > 0), 0)     as unidades,
+         max(fecha)                                           as fecha
+  from public.kpi_inventario
+  group by pais, empresa;
+grant select on public.kpi_inventario_resumen to authenticated;
